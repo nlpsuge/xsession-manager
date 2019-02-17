@@ -1,4 +1,6 @@
 #!/bin/bash
+# Save the current opened GUI applications.
+# And re-open or restore them
 save()
 {
     p_l=`wmctrl  -lp | awk  '{ print $3 }' | sort | uniq`
