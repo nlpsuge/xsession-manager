@@ -4,13 +4,13 @@ Some very useful Shells
 
 Save the current opened GUI applications. And re-open or restore them.
 
-Usage: __
-chmod +x save_restore_opened_apps__
-#Save the current opened GUI applications__
-./save_restore_opened_apps -s__
-./save_restore_opened_apps --save__
-#Re-open or restore them.__
-./save_restore_opened_apps -r__
+Usage:<br />
+chmod +x save_restore_opened_apps<br />
+#Save the current opened GUI applications<br />
+./save_restore_opened_apps -s<br />
+./save_restore_opened_apps --save<br />
+#Re-open or restore them.<br />
+./save_restore_opened_apps -r<br />
 ./save_restore_opened_apps --restore
 
 Todo:
