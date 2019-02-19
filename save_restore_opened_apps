@@ -1,25 +1,38 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Save the current opened GUI applications.
 # And re-open or restore them
+
+location_of_current_opened_apps=~/.current_opened_apps
+
 save()
 {
-    p_l=`wmctrl  -lp | awk  '{ print $3 }' | sort | uniq`
-    for p in $p_l; do ps -q $p -f --no-headers | awk '{for(i=8;i<=NF;++i)printf $i""FS ; print ""}'  ;done > ~/Documents/current_opened_apps
+    p_l=$(wmctrl -lp | awk  '{ print $3 }' | sort | uniq)
+    for p in $p_l; do
+        ps -q $p -f --no-headers | awk '{for(i=8;i<=NF;++i)printf $i""FS ; print ""}'
+    done > "$location_of_current_opened_apps"
 }
 
 restore()
 {
     SAVEIFS=$IFS
     IFS=$(echo -en "\n\b")
-    for command in `cat ~/Documents/current_opened_apps `; do bash -c "nohup  $command &"; done
+    for command in $(cat "$location_of_current_opened_apps"); do
+        bash -c "nohup  $command &"
+    done
     IFS=$SAVEIFS
    
 }
 
+list()
+{
+    cat "$location_of_current_opened_apps"
+}
 if [ x"$1" = x"-s" -o x"$1" = x"--save" ]; then
     save
 elif [ x"$1" = x"-r" -o x"$1" = x"--restore" ]; then
     restore
+elif [ x"$1" = x"-l" -o x"$1" = x"--list" ]; then
+    list
 else
-    echo "-s/--save 或 -r/--restore"
+    echo "-s/--save or -r/--restore or -l/--list"
 fi
