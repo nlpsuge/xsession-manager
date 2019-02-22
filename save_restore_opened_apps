@@ -25,11 +25,31 @@ restore()
 
 list()
 {
+    echo -n "Location: "
+    ls "$location_of_current_opened_apps"
+    echo 
     cat "$location_of_current_opened_apps"
 }
+
+confirm()
+{
+    echo -n "Are you sure? [y/N]:"
+    read c
+    if [ x"$c" = x"N" ]; then
+        exit 0
+    elif [ x"$c" = x"y" ]; then
+	# continue
+	return 0
+    else
+	confirm
+    fi
+}
+
 if [ x"$1" = x"-s" -o x"$1" = x"--save" ]; then
+    confirm
     save
 elif [ x"$1" = x"-r" -o x"$1" = x"--restore" ]; then
+    confirm
     restore
 elif [ x"$1" = x"-l" -o x"$1" = x"--list" ]; then
     list
