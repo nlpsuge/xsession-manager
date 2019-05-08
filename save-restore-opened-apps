@@ -8,7 +8,7 @@ save()
 {
     p_l=$(wmctrl -lp | awk  '{ print $3 }' | sort | uniq)
     for p in $p_l; do
-        ps -q $p -f --no-headers | awk '{for(i=8;i<=NF;++i)printf $i""FS ; print ""}'
+        ps -q $p -f --no-headers | awk '{for(i=8;i<=NF;++i) {if ($i ~ /^\w:/) {printf "wine " $i""FS} else {printf $i""FS}}; print ""}';
     done > "$location_of_current_opened_apps"
 }
 
