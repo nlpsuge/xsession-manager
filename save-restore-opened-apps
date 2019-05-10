@@ -6,6 +6,8 @@ location_of_current_opened_apps=~/.current_opened_apps
 
 save()
 {
+    # backup the old file
+    cp "$location_of_current_opened_apps" "$location_of_current_opened_apps".old
     p_l=$(wmctrl -lp | awk  '{ print $3 }' | sort | uniq)
     for p in $p_l; do
 	# query process infomation
