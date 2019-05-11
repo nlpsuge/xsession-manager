@@ -1,6 +1,4 @@
-Some very useful Shells
-
-# 1.[save-restore-opened-apps](https://github.com/nlpsuge/MyShell/blob/master/save-restore-opened-apps)
+# [save-restore-opened-apps](https://github.com/nlpsuge/MyShell/blob/master/save-restore-opened-apps)
 
 Save the current opened GUI applications. And re-open or restore them.
 
@@ -14,5 +12,5 @@ chmod +x save-restore-opened-apps<br />
 ./save-restore-opened-apps --restore
 
 Todo:
-1. Need to handle WINE-based application
-2. Need to avoid to save system's applications
+- [X] Need to handle WINE-based application
+- [ ] Need to avoid to save system's applications
