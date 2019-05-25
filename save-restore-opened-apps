@@ -72,6 +72,16 @@ confirm()
     fi
 }
 
+# Do not allow execute this tool using root
+check_user(){
+    if [ $EUID -eq 0 ]; then
+        echo "This tool must be run as a normal user"
+	exit 1
+    fi
+}
+
+check_user
+
 if [ x"$1" = x"-s" -o x"$1" = x"--save" ]; then
     confirm
     save
