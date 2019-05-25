@@ -2,6 +2,9 @@
 # Save the current opened GUI applications.
 # And re-open or restore them
 
+MSG_SAVE="save running apps"
+MSG_REOPEN="reopen the previous running apps"
+
 LOCATION_OF_CURRENT_RUNNING_APPS=~/.current_running_apps
 
 file_exists()
@@ -60,7 +63,7 @@ list()
 
 confirm()
 {
-    echo -n "Are you sure? [y/N]:"
+    echo -n "Do you realy want to "$1"? [y/N]:"
     read c
     if [ x"$c" = x"N" ]; then
         exit 0
@@ -68,7 +71,7 @@ confirm()
 	# continue
 	return 0
     else
-	confirm
+	confirm "$1"
     fi
 }
 
@@ -83,10 +86,10 @@ check_user(){
 check_user
 
 if [ x"$1" = x"-s" -o x"$1" = x"--save" ]; then
-    confirm
+    confirm "$MSG_SAVE"
     save
 elif [ x"$1" = x"-r" -o x"$1" = x"--restore" ]; then
-    confirm
+    confirm "$MSG_REOPEN"
     restore
 elif [ x"$1" = x"-l" -o x"$1" = x"--list" ]; then
     list
