@@ -33,9 +33,7 @@ save()
     p_l=$(wmctrl -lp | awk  '{ print $3 }' | sort | uniq)
     for p in $p_l; do
 	# query process infomation
-        ps -q $p -f --no-headers |
-		# Remove first 8 fields, see also: https://backreference.org/2014/10/13/range-of-fields-in-awk/
-	       	awk '{sub(/^[[:blank:]]*([^[:blank:]]+[[:blank:]]+){7}/,""); print}' | 
+        ps -q $p -eo args --no-headers |
 		# Append 'wine' if the command starts with 'SomeLetter:', eg 'C:', assume it is a wine-based application
 		awk '{if ($0 ~ /^\w:/) {printf "wine \"" $0 "\""} else {printf $0}; print ""}';
     done > "$LOCATION_OF_CURRENT_RUNNING_APPS"
