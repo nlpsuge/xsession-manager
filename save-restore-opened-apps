@@ -2,12 +2,34 @@
 # Save the current opened GUI applications.
 # And re-open or restore them
 
-location_of_current_opened_apps=~/.current_opened_apps
+LOCATION_OF_CURRENT_RUNNING_APPS=~/.current_running_apps
+
+file_exists()
+{
+    if [ -e "$1" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+backup_or_create()
+{
+    file_exists "$LOCATION_OF_CURRENT_RUNNING_APPS"
+    if [ $? == 0 ]; then
+        # backup the old file
+        cp "$LOCATION_OF_CURRENT_RUNNING_APPS" "$LOCATION_OF_CURRENT_RUNNING_APPS".old
+    else
+        # Also create none existing directories if necessary
+        mkdir -p $(dirname "$LOCATION_OF_CURRENT_RUNNING_APPS")
+        touch "$LOCATION_OF_CURRENT_RUNNING_APPS"    
+    fi
+}
 
 save()
 {
-    # backup the old file
-    cp "$location_of_current_opened_apps" "$location_of_current_opened_apps".old
+    backup_or_create
+
     p_l=$(wmctrl -lp | awk  '{ print $3 }' | sort | uniq)
     for p in $p_l; do
 	# query process infomation
@@ -16,14 +38,14 @@ save()
 	       	awk '{sub(/^[[:blank:]]*([^[:blank:]]+[[:blank:]]+){7}/,""); print}' | 
 		# Append 'wine' if the command starts with 'SomeLetter:', eg 'C:', assume it is a wine-based application
 		awk '{if ($0 ~ /^\w:/) {printf "wine \"" $0 "\""} else {printf $0}; print ""}';
-    done > "$location_of_current_opened_apps"
+    done > "$LOCATION_OF_CURRENT_RUNNING_APPS"
 }
 
 restore()
 {
     SAVEIFS=$IFS
     IFS=$(echo -en "\n\b")
-    for command in $(cat "$location_of_current_opened_apps"); do
+    for command in $(cat "$LOCATION_OF_CURRENT_RUNNING_APPS"); do
 	bash -c "nohup  $command &"
     done
     IFS=$SAVEIFS
@@ -33,9 +55,9 @@ restore()
 list()
 {
     echo -n "Location: "
-    ls "$location_of_current_opened_apps"
+    ls "$LOCATION_OF_CURRENT_RUNNING_APPS"
     echo 
-    cat "$location_of_current_opened_apps"
+    cat "$LOCATION_OF_CURRENT_RUNNING_APPS"
 }
 
 confirm()
