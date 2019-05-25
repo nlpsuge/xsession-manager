@@ -44,7 +44,7 @@ restore()
     SAVEIFS=$IFS
     IFS=$(echo -en "\n\b")
     for command in $(cat "$LOCATION_OF_CURRENT_RUNNING_APPS"); do
-	bash -c "nohup  $command &"
+	bash -c "nohup  $command >/dev/null 2>&1 &"
     done
     IFS=$SAVEIFS
    
