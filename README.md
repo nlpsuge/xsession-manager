@@ -1,16 +1,45 @@
 # [save-restore-opened-apps](https://github.com/nlpsuge/MyShell/blob/master/save-restore-opened-apps)
 
-Save the current opened GUI applications. And re-open or restore them.
+Save running X applications, and then reopen them all later. This tool relies on [wmctrl](http://tripie.sweb.cz/utils/wmctrl/).
 
-Usage:<br />
-chmod +x save-restore-opened-apps<br />
-#Save the current opened GUI applications<br />
-./save-restore-opened-apps -s<br />
-./save-restore-opened-apps --save<br />
-#Re-open or restore them.<br />
-./save-restore-opened-apps -r<br />
-./save-restore-opened-apps --restore
+## Install
+```bash
+git clone https://github.com/nlpsuge/save-restore-opened-apps.git
+cd save-restore-opened-apps
+chmod +x save-restore-opened-apps
+# then copy save-restore-opened-apps to somewhere you like, eg /usr/local/bin
+cp save-restore-opened-apps /usr/local/bin
+```
 
-Todo:
-- [X] Need to handle WINE-based application
-- [ ] Need to avoid to save system's applications
+## Usage:<br />
+
+### Save running X applications
+```bash
+save-restore-opened-apps -s
+```
+or
+```bash
+save-restore-opened-apps --save
+```
+
+### Reopen them all
+```bash
+save-restore-opened-apps -r
+```
+or
+```bash
+save-restore-opened-apps --restore
+```
+
+### List saved apps
+```bash
+save-restore-opened-apps -l
+```
+or
+```bash
+save-restore-opened-apps --list
+```
+
+## Todo:
+- [X] Reopen WINE-based application
+- [ ] Avoid to save system's applications
