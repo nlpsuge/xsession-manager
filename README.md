@@ -28,7 +28,7 @@ save-restore-opened-apps -r
 ```
 or
 ```bash
-save-restore-opened-apps --restore
+save-restore-opened-apps --reopen
 ```
 
 ### List saved apps
