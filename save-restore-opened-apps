@@ -74,7 +74,8 @@ confirm()
 }
 
 # Do not allow execute this tool using root
-check_user(){
+check_user()
+{
     if [ $EUID -eq 0 ]; then
         echo "This tool must be run as a normal user"
 	exit 1
