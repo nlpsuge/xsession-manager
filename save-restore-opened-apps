@@ -36,7 +36,7 @@ save()
 	# query process infomation
         ps -q $p -eo args --no-headers |
 		# Append 'wine' if the command starts with 'SomeLetter:', eg 'C:', assume it is a wine-based application
-		awk '{if ($0 ~ /^\w:/) {printf "wine \"" $0 "\""} else {printf $0}; print ""}';
+		awk '{if ($0 ~ /^\w:/) {print "wine \"" $0 "\""} else {print $0};}';
     done > "$LOCATION_OF_CURRENT_RUNNING_APPS"
 }
 
