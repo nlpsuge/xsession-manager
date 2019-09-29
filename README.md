@@ -42,4 +42,4 @@ save-restore-opened-apps --list
 
 ## Todo:
 - [X] Reopen WINE-based application
-- [ ] Avoid to save system's applications
+- [ ] Avoid saving system's applications
