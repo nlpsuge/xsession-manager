@@ -30,6 +30,10 @@ or
 ```bash
 save-restore-opened-apps --reopen
 ```
+or pop a dialog to ask to restore the previous working state
+```bash
+save-restore-opened-apps -d
+```
 
 ### List saved apps
 ```bash
