@@ -82,6 +82,13 @@ check_user()
     fi
 }
 
+pop_a_dialog_to_ask_for_restoring()
+{
+    zenity --question --no-wrap --text="Do you want to restore the previous working state?"
+    # Restore apps only after the 'ok' button is pressed
+    [ $? == 0 ] &&  reopen
+}
+
 check_user
 
 if [ x"$1" = x"-s" -o x"$1" = x"--save" ]; then
@@ -92,6 +99,8 @@ elif [ x"$1" = x"-r" -o x"$1" = x"--reopen" ]; then
     reopen
 elif [ x"$1" = x"-l" -o x"$1" = x"--list" ]; then
     list
+elif [ x"$1" = x"-d" ]; then
+    pop_a_dialog_to_ask_for_restoring
 else
-    echo "-s/--save or -r/--reopen or -l/--list"
+    echo "-s/--save or -r/--reopen or -l/--list or -d"
 fi
