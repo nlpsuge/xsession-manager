@@ -43,6 +43,12 @@ or
 ```bash
 save-restore-opened-apps --list
 ```
+## Do you want to auto restore the previous working state after login?
+Here is a solution. If you are using Fedora, create a file named ```auto-restore-working-state.desktop``` and the ```Exec``` should be:
+```bash
+save-restore-opened-apps -d
+```
+Then put this file into ```~/.config/autostart```.
 
 ## Todo:
 - [X] Reopen WINE-based application
