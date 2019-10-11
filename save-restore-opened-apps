@@ -61,7 +61,7 @@ list()
 
 confirm()
 {
-    echo -n "Do you realy want to "$1"? [y/N]:"
+    echo -n "Do you really want to "$1"? [y/N]:"
     read c
     if [ x"$c" = x"N" ]; then
         exit 0
