@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 MSG_SAVE="save running apps"
-MSG_REOPEN="reopen the previous running apps"
+MSG_RESTORE="restore the previous running apps"
+MSG_CLOSE_ALL_WINDOWS="close all windows"
 
 LOCATION_OF_CURRENT_RUNNING_APPS=~/.current_running_apps
 
@@ -40,7 +41,7 @@ save()
     done > "$LOCATION_OF_CURRENT_RUNNING_APPS"
 }
 
-reopen()
+restore()
 {
     SAVEIFS=$IFS
     IFS=$(echo -en "\n\b")
@@ -84,9 +85,46 @@ check_user()
 
 pop_a_dialog_to_ask_for_restoring()
 {
-    zenity --question --no-wrap --text="Do you want to restore the previous working state?"
-    # Restore apps only after the 'ok' button is pressed
-    [ $? == 0 ] &&  reopen
+    zenity --timeout 5 --question --no-wrap --text="Do you want to restore the previous working state?"
+    # Restore apps only after the 'ok' button is pressed or timeout
+    [ $? == 0 -o $? == 5 ] &&  restore
+}
+
+get_all_windows_id()
+{
+    echo "$(wmctrl -l | awk  '{ print $1 }')"
+}
+
+close_all_windows()
+{
+    SAVEIFS=$IFS
+    IFS=$'\n'
+    
+    window_ids="$(get_all_windows_id)"
+    echo "Opening Windows: "$window_ids""
+    for window_id in $window_ids; do
+        echo "Closing "$window_id"($(wmctrl -lp | grep "$window_id"))"
+        # Avoid race condition?
+        sleep 0.25
+        wmctrl -ic "$window_id"
+    done
+
+    IFS=$SAVEIFS
+
+    verify_all_windows_closed
+}
+
+verify_all_windows_closed()
+{
+    echo Verifying...
+    if [ "$(get_all_windows_id)" != "" ]; then
+        sleep 0.5
+        if [ "$(get_all_windows_id)" == "" ]; then
+            exit 0
+        fi
+        echo Retrying...
+        close_all_windows
+    fi
 }
 
 check_user
@@ -94,13 +132,16 @@ check_user
 if [ x"$1" = x"-s" -o x"$1" = x"--save" ]; then
     confirm "$MSG_SAVE"
     save
-elif [ x"$1" = x"-r" -o x"$1" = x"--reopen" ]; then
-    confirm "$MSG_REOPEN"
-    reopen
-elif [ x"$1" = x"-l" -o x"$1" = x"--list" ]; then
-    list
+elif [ x"$1" = x"-r" -o x"$1" = x"--restore" ]; then
+    confirm "$MSG_RESTORE"
+    restore
 elif [ x"$1" = x"-d" ]; then
     pop_a_dialog_to_ask_for_restoring
+elif [ x"$1" = x"-C" -o x"$1" = x"--close-all" ]; then
+    confirm "$MSG_CLOSE_ALL_WINDOWS"
+    close_all_windows
+elif [ x"$1" = x"-l" -o x"$1" = x"--list" ]; then
+    list
 else
-    echo "-s/--save or -r/--reopen or -l/--list or -d"
+    echo "-s/--save or -r/--restore or -l/--list or -d or -C/--close-all"
 fi
