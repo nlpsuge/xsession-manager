@@ -11,7 +11,7 @@ chmod +x save-restore-opened-apps
 cp save-restore-opened-apps /usr/local/bin
 ```
 
-## Usage:<br />
+## Usage:
 
 ### Save running X applications
 ```bash
@@ -30,9 +30,18 @@ or
 ```bash
 save-restore-opened-apps --reopen
 ```
-or pop a dialog to ask to restore the previous working state
+or pop a dialog to ask to restore the previous working state. Note that the default countdown is 5 seconds.
 ```bash
 save-restore-opened-apps -d
+```
+
+### Close all windows
+```bash
+save-restore-opened-apps -C
+```
+or
+```bash
+save-restore-opened-apps --close-all
 ```
 
 ### List saved apps
