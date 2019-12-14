@@ -18,7 +18,7 @@ file_exists()
 backup_or_create()
 {
     file_exists "$LOCATION_OF_CURRENT_RUNNING_APPS"
-    if [ $? == 0 ]; then
+    if [ $? -eq 0 ]; then
         # backup the old file
         cp "$LOCATION_OF_CURRENT_RUNNING_APPS" "$LOCATION_OF_CURRENT_RUNNING_APPS".old
     else
@@ -85,9 +85,9 @@ check_user()
 
 pop_a_dialog_to_ask_for_restoring()
 {
-    zenity --timeout 5 --question --no-wrap --text="Do you want to restore the previous working state?"
+    zenity --timeout 10 --question --no-wrap --text="Do you want to restore the previous working state?"
     # Restore apps only after the 'ok' button is pressed or timeout
-    [ $? == 0 -o $? == 5 ] &&  restore
+    [ $? -eq 0 -o $? -eq 5 ] &&  restore
 }
 
 get_all_windows_id()
@@ -118,8 +118,8 @@ verify_all_windows_closed()
 {
     echo Verifying...
     if [ "$(get_all_windows_id)" != "" ]; then
-        sleep 0.5
-        if [ "$(get_all_windows_id)" == "" ]; then
+        sleep 4
+        if [ "$(get_all_windows_id)" = "" ]; then
             exit 0
         fi
         echo Retrying...
