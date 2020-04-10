@@ -48,7 +48,7 @@ restore()
     for command in $(cat "$LOCATION_OF_CURRENT_RUNNING_APPS"); do
         bash -c "nohup  $command >/dev/null 2>&1 &"
         # Wait some seconds, so we can restore applications smoothly
-	sleep 2
+        sleep 2
     done
     IFS=$SAVEIFS
    
