@@ -32,7 +32,14 @@ save()
 {
     backup_or_create
 
-    p_l=$(wmctrl -lp | awk  '{ print $3 }' | sort | uniq)
+    wmctrl_lp=$(wmctrl -lp)
+    if [ ! $? -eq 0 ]; then
+        echo "Can't save the current X session due to the previous error!"
+        exit 1
+    fi
+
+    p_l=$(echo "$wmctrl_lp" | awk  '{ print $3 }' | sort | uniq)
+
     for p in $p_l; do
         # query process infomation
         ps -q $p -eo args --no-headers |
