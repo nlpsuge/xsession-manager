@@ -46,7 +46,7 @@ restore()
     SAVEIFS=$IFS
     IFS=$(echo -en "\n\b")
     for command in $(cat "$LOCATION_OF_CURRENT_RUNNING_APPS"); do
-      bash -c "nohup  $command >/dev/null 2>&1 &"
+        bash -c "nohup  $command >/dev/null 2>&1 &"
     done
     IFS=$SAVEIFS
    
@@ -67,10 +67,10 @@ confirm()
     if [ x"$c" = x"N" ]; then
         exit 0
     elif [ x"$c" = x"y" ]; then
-    # continue
-    return 0
+        # continue
+        return 0
     else
-    confirm "$1"
+        confirm "$1"
     fi
 }
 
@@ -79,7 +79,7 @@ check_user()
 {
     if [ $EUID -eq 0 ]; then
         echo "This tool must be run as a normal user"
-    exit 1
+        exit 1
     fi
 }
 
