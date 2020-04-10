@@ -124,8 +124,10 @@ verify_all_windows_closed()
         if [ "$(get_all_windows_id)" = "" ]; then
             exit 0
         fi
-        echo Retrying...
-        close_all_windows
+        # echo Retrying...
+        # close_all_windows
+        # Only verify whether windows closed or not for now
+        verify_all_windows_closed
     fi
 }
 
