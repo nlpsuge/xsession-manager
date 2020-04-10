@@ -76,11 +76,21 @@ confirm()
     fi
 }
 
-# Do not allow execute this tool using root
 check_user()
 {
+    # Do not allow execute this tool using root
     if [ $EUID -eq 0 ]; then
         echo "This tool must be run as a normal user"
+        exit 1
+    fi
+    
+    # Don't allow to be run under a su login session
+    # Get user´s login name
+    logname="$(logname)"
+    # Get the user name associated with the current effective user ID
+    effective_username="$(whoami)"
+    if [ x"$logname" != x"$effective_username" ]; then
+        echo "This tool must be run under the login user's session. Maybe you are under a su login session?"
         exit 1
     fi
 }
