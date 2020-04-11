@@ -73,7 +73,7 @@ confirm()
 {
     echo -n "Do you really want to "$1"? [y/N]:"
     read c
-    if [ x"$c" = x"N" ]; then
+    if [ x"$c" = x"N" -o x"$c" = x"n" ]; then
         exit 0
     elif [ x"$c" = x"y" ]; then
         # continue
