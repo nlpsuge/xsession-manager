@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-MSG_SAVE="save running apps"
-MSG_RESTORE="restore the previous running apps"
+MSG_SAVE="save the current X session"
+MSG_RESTORE="restore the previous X session"
 MSG_CLOSE_ALL_WINDOWS="close all windows"
 
-LOCATION_OF_CURRENT_RUNNING_APPS=~/.current_running_apps
+LOCATION_OF_CURRENT_XSESSION=~/.config/xsession-manager/data/xsession-current
 
 file_exists()
 {
@@ -17,14 +17,14 @@ file_exists()
 
 backup_or_create()
 {
-    file_exists "$LOCATION_OF_CURRENT_RUNNING_APPS"
+    file_exists "$LOCATION_OF_CURRENT_XSESSION"
     if [ $? -eq 0 ]; then
         # backup the old file
-        cp "$LOCATION_OF_CURRENT_RUNNING_APPS" "$LOCATION_OF_CURRENT_RUNNING_APPS".old
+        cp "$LOCATION_OF_CURRENT_XSESSION" "$LOCATION_OF_CURRENT_XSESSION".old
     else
         # Also create none existing directories if necessary
-        mkdir -p $(dirname "$LOCATION_OF_CURRENT_RUNNING_APPS")
-        touch "$LOCATION_OF_CURRENT_RUNNING_APPS"    
+        mkdir -p $(dirname "$LOCATION_OF_CURRENT_XSESSION")
+        touch "$LOCATION_OF_CURRENT_XSESSION"
     fi
 }
 
@@ -45,14 +45,14 @@ save()
         ps -q $p -eo args --no-headers |
         # Append 'wine' if the command starts with 'SomeLetter:', eg 'C:', assume it is a wine-based application
         awk '{if ($0 ~ /^\w:/) {print "wine \"" $0 "\""} else {print $0};}';
-    done > "$LOCATION_OF_CURRENT_RUNNING_APPS"
+    done > "$LOCATION_OF_CURRENT_XSESSION"
 }
 
 restore()
 {
     SAVEIFS=$IFS
     IFS=$(echo -en "\n\b")
-    for command in $(cat "$LOCATION_OF_CURRENT_RUNNING_APPS"); do
+    for command in $(cat "$LOCATION_OF_CURRENT_XSESSION"); do
         bash -c "nohup  $command >/dev/null 2>&1 &"
         # Wait some seconds, so we can restore applications smoothly
         sleep 2
@@ -64,9 +64,9 @@ restore()
 list()
 {
     echo -n "Location: "
-    ls "$LOCATION_OF_CURRENT_RUNNING_APPS"
+    ls "$LOCATION_OF_CURRENT_XSESSION"
     echo 
-    cat "$LOCATION_OF_CURRENT_RUNNING_APPS"
+    cat "$LOCATION_OF_CURRENT_XSESSION"
 }
 
 confirm()
@@ -104,7 +104,7 @@ check_user()
 
 pop_a_dialog_to_ask_for_restoring()
 {
-    zenity --timeout 10 --question --no-wrap --text="Do you want to restore the previous working state?"
+    zenity --timeout 10 --question --no-wrap --text="Do you want to restore the previous X session?"
     # Restore apps only after the 'ok' button is pressed or timeout
     [ $? -eq 0 -o $? -eq 5 ] &&  restore
 }
