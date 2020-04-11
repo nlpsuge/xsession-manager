@@ -1,64 +1,65 @@
-# [save-restore-opened-apps](https://github.com/nlpsuge/MyShell/blob/master/save-restore-opened-apps)
+# [xsession-manager](https://github.com/nlpsuge/MyShell/blob/master/xsession-manager)
 
-Save running X applications, and then reopen them all later. This tool relies on [wmctrl](http://tripie.sweb.cz/utils/wmctrl/).
+Save X session and restore it later. This tool relies on [wmctrl](http://tripie.sweb.cz/utils/wmctrl/).
 
 ## Install
 ```bash
-git clone https://github.com/nlpsuge/save-restore-opened-apps.git
-cd save-restore-opened-apps
-chmod +x save-restore-opened-apps
-# then copy save-restore-opened-apps to somewhere you like, eg /usr/local/bin
-cp save-restore-opened-apps /usr/local/bin
+git clone https://github.com/nlpsuge/xsession-manager.git
+cd xsession-manager
+chmod +x xsession-manager
+# Then copy xsession-manager to somewhere you prefer, like /usr/local/bin.
+cp xsession-manager /usr/local/bin
 ```
 
 ## Usage:
 
-### Save running X applications
+### Save the current X session
 ```bash
-save-restore-opened-apps -s
+xsession-manager -s
 ```
 or
 ```bash
-save-restore-opened-apps --save
+xsession-manager --save
 ```
 
-### Reopen them all
+### Restore the previous X session
 ```bash
-save-restore-opened-apps -r
+xsession-manager -r
 ```
 or
 ```bash
-save-restore-opened-apps --reopen
+xsession-manager --reopen
 ```
-or pop a dialog to ask to restore the previous working state. Note that the default countdown is 5 seconds.
+or pop a dialog to ask to restore the previous X session. 
+Note that the default countdown is 5 seconds giving you some time to cancel this operation.
 ```bash
-save-restore-opened-apps -d
+xsession-manager -d
 ```
 
 ### Close all windows
 ```bash
-save-restore-opened-apps -C
+xsession-manager -C
 ```
 or
 ```bash
-save-restore-opened-apps --close-all
+xsession-manager --close-all
 ```
 
-### List saved apps
+### List the details of the previous X session
 ```bash
-save-restore-opened-apps -l
+xsession-manager -l
 ```
 or
 ```bash
-save-restore-opened-apps --list
+xsession-manager --list
 ```
-## Do you want to auto restore the previous working state after login?
+## If you want to restore the previous X session automatically after login
 Here is a solution. If you are using Fedora, create a file named ```auto-restore-working-state.desktop``` and the ```Exec``` should be:
 ```bash
-save-restore-opened-apps -d
+xsession-manager -d
 ```
 Then put this file into ```~/.config/autostart```.
 
 ## Todo:
-- [X] Reopen WINE-based application
+- [X] Support WINE-based application
 - [ ] Avoid saving system's applications
