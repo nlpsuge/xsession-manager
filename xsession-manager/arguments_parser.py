@@ -1,4 +1,5 @@
 import argparse
+import sys
 
 
 class ArgumentsParser:
@@ -19,5 +20,10 @@ class ArgumentsParser:
 
         parser.add_argument('-l', '--list', action='store_true', help='List the sessions.')
         parser.add_argument('-t', '--detail', help='Check out the details of a session.')
+
+        if len(sys.argv) == 1:
+            print('No arguments provided.\n')
+            parser.print_help(sys.stderr)
+            sys.exit(1)
 
         return parser.parse_args()
