@@ -3,6 +3,14 @@
 from utils.base import Base
 
 
+class XSessionConfig(Base):
+    session_name: str
+    session_create_time: str
+    backup_time: str
+    restore_times: list = []
+    x_session_config_objects: list
+
+
 class XSessionConfigObject(Base):
 
     class WindowPosition(Base):
@@ -20,10 +28,10 @@ class XSessionConfigObject(Base):
 
     app_name: str
     cmd: list
-    create_time: str
+    process_create_time: str
 
     @staticmethod
-    def convert_wmctl_result_2_list(windows_list: list, remove_duplicates_by_pid=True):
+    def convert_wmctl_result_2_list(windows_list: list, remove_duplicates_by_pid=True) -> XSessionConfig:
         session_details = []
         for window in windows_list:
             config = XSessionConfigObject()
@@ -41,12 +49,16 @@ class XSessionConfigObject(Base):
 
             session_details.append(config)
 
+        x_session_config = XSessionConfig()
+
         if remove_duplicates_by_pid:
             session_details_dict = {x_session_config.pid: x_session_config
                                     for x_session_config in session_details}
-            return list(session_details_dict.values())
+            x_session_config.x_session_config_objects = list(session_details_dict.values())
+            return x_session_config
 
-        return session_details
+        x_session_config.x_session_config_objects = session_details
+        return x_session_config
 
 
 
