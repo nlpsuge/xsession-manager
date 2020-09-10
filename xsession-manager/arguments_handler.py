@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 from pathlib import Path
+from time import time, sleep
 
 import psutil
 import sys
@@ -106,7 +107,7 @@ def save_session(session_name: str):
                 sort_keys=True))
 
 
-def restore_session(session_name):
+def restore_session(session_name, restoring_interval=2):
     session_path = Path(Locations.BASE_LOCATION_OF_SESSIONS, session_name)
     if not session_path.exists():
         raise FileNotFoundError('Session file [%s] was not found.' % session_path)
@@ -129,8 +130,9 @@ def restore_session(session_name):
 
                 # Ignore the output for now
                 subprocess_utils.run_cmd(cmd)
-
                 print('Success to restore application:     [%s]' % app_name)
+
+                sleep(restoring_interval)
 
 
 def handle_arguments(args: Namespace):
@@ -140,6 +142,7 @@ def handle_arguments(args: Namespace):
     detail = args.detail
     close_all = args.close_all
     pop_up_a_dialog_to_restore = args.p
+    restoring_interval = args.restoring_interval
 
     if session_name_for_saving:
         print(constants.Prompts.MSG_SAVE)
@@ -149,6 +152,6 @@ def handle_arguments(args: Namespace):
     if session_name_for_restoring:
         print(constants.Prompts.MSG_RESTORE % session_name_for_restoring)
         wait_for_answer()
-        restore_session(session_name_for_restoring)
+        restore_session(session_name_for_restoring, restoring_interval)
 
 

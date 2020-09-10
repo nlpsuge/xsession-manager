@@ -15,6 +15,10 @@ class ArgumentsParser:
                             nargs='?',
                             help='Restore a session gracefully. '
                                  'Restore the default session if not specified a session name.')
+        parser.add_argument('-ri', '--restoring-interval', type=int,
+                            default=2,
+                            help='Specify the interval between restoring applications, in seconds. '
+                                 'The default is 2 seconds. ')
 
         parser.add_argument('-p', action='store_true', help='Pop a dialog to ask user whether to restore a X session.')
 
