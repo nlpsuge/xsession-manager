@@ -1,11 +1,15 @@
 import sys
+from collections import Iterable
+from time import sleep
 
 from types import SimpleNamespace as Namespace
 
 import argparse
 
+import xsession_manager
 from settings import constants
 from settings.constants import Locations
+from settings.xsession_config import XSessionConfigObject, XSessionConfig
 from utils import string_utils, wmctl_wapper
 from xsession_manager import save_session, restore_session
 
@@ -91,4 +95,16 @@ def handle_arguments(args: Namespace):
         wait_for_answer()
         restore_session(session_name_for_restoring, restoring_interval)
 
+    if close_all:
+        print(constants.Prompts.MSG_CLOSE_ALL_WINDOWS)
+        wait_for_answer()
+        sessions: list[XSessionConfigObject] = \
+            xsession_manager.get_session_details(False).x_session_config_objects
+        sessions.reverse()
+        for session in sessions:
+            print('Closing %s(%s %s).' % (session.app_name, session.window_id, session.pid))
+            wmctl_wapper.close_window_gracefully(session.window_id)
+            sleep(0.25)
+
+        print('Done!')
 

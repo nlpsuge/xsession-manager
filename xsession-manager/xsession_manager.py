@@ -13,16 +13,8 @@ from utils import wmctl_wapper, subprocess_utils
 
 
 def save_session(session_name: str):
-    running_windows: list = wmctl_wapper.get_running_windows()
-    x_session_config: XSessionConfig = XSessionConfigObject.convert_wmctl_result_2_list(running_windows)
+    x_session_config = get_session_details()
     x_session_config.session_name = session_name
-    print('Got the process list according to wmctl: ' + str(x_session_config))
-    for sd in x_session_config.x_session_config_objects:
-        process = psutil.Process(sd.pid)
-        sd.app_name = process.name()
-        sd.cmd = process.cmdline()
-        sd.process_create_time = datetime.datetime.fromtimestamp(process.create_time()).strftime("%Y-%m-%d %H:%M:%S")
-    print('Complete the process list according to psutil: ' + str(x_session_config))
 
     session_path = Path(Locations.BASE_LOCATION_OF_SESSIONS, session_name)
     print('Saving the session to: ' + str(session_path))
@@ -40,6 +32,28 @@ def save_session(session_name: str):
     print('Saving the new json format x session [%s] ' % save_session_details_json)
     write_session(session_path, save_session_details_json)
     print('Done!')
+
+
+def get_session_details(remove_duplicates_by_pid=True) -> XSessionConfig:
+    
+    """
+    Get the current running session details, including app name, process id, 
+    window position, command line etc of each app. See XSessionConfigObject for more information.
+    
+    :return: the current running session details
+    """
+    
+    running_windows: list = wmctl_wapper.get_running_windows()
+    x_session_config: XSessionConfig = XSessionConfigObject.convert_wmctl_result_2_list(running_windows,
+                                                                                        remove_duplicates_by_pid)
+    print('Got the process list according to wmctl: ' + str(x_session_config))
+    for sd in x_session_config.x_session_config_objects:
+        process = psutil.Process(sd.pid)
+        sd.app_name = process.name()
+        sd.cmd = process.cmdline()
+        sd.process_create_time = datetime.datetime.fromtimestamp(process.create_time()).strftime("%Y-%m-%d %H:%M:%S")
+    print('Complete the process list according to psutil: ' + str(x_session_config))
+    return x_session_config
 
 
 def backup_session(original_session_path):
@@ -78,7 +92,7 @@ def restore_session(session_name, restoring_interval=2):
         namespace_objs = json.load(file, object_hook=lambda d: Namespace(**d))
         # Note: os.fork() does not support the Windows
         pid = os.fork()
-        # Run commandlines in the child process
+        # Run command lines in the child process
         # TODO: I'm not sure if this method works well and is the best practice
         if pid == 0:
             for namespace_obj in namespace_objs.x_session_config_objects:
