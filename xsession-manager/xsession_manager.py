@@ -9,7 +9,7 @@ import psutil
 
 from settings.constants import Locations
 from settings.xsession_config import XSessionConfig, XSessionConfigObject
-from utils import wmctl_wapper, subprocess_utils
+from utils import wmctl_wrapper, subprocess_utils
 
 
 def save_session(session_name: str):
@@ -43,7 +43,7 @@ def get_session_details(remove_duplicates_by_pid=True) -> XSessionConfig:
     :return: the current running session details
     """
     
-    running_windows: list = wmctl_wapper.get_running_windows()
+    running_windows: list = wmctl_wrapper.get_running_windows()
     x_session_config: XSessionConfig = XSessionConfigObject.convert_wmctl_result_2_list(running_windows,
                                                                                         remove_duplicates_by_pid)
     print('Got the process list according to wmctl: ' + str(x_session_config))

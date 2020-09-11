@@ -10,7 +10,7 @@ import xsession_manager
 from settings import constants
 from settings.constants import Locations
 from settings.xsession_config import XSessionConfigObject, XSessionConfig
-from utils import string_utils, wmctl_wapper
+from utils import string_utils, wmctl_wrapper
 from xsession_manager import save_session, restore_session
 
 
@@ -51,7 +51,7 @@ def check_and_reset_args(args: Namespace):
             and not string_utils.empty_string(restore):
         # get the opening windows via wmctl
         print("Opening windows list:")
-        running_windows = wmctl_wapper.get_running_windows_raw()
+        running_windows = wmctl_wrapper.get_running_windows_raw()
         if len(running_windows) > 0:
             for rw in running_windows:
                 print(rw)
@@ -103,7 +103,7 @@ def handle_arguments(args: Namespace):
         sessions.reverse()
         for session in sessions:
             print('Closing %s(%s %s).' % (session.app_name, session.window_id, session.pid))
-            wmctl_wapper.close_window_gracefully(session.window_id)
+            wmctl_wrapper.close_window_gracefully(session.window_id)
             sleep(0.25)
 
         print('Done!')
