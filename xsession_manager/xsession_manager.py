@@ -48,7 +48,7 @@ def get_session_details(remove_duplicates_by_pid=True,
     running_windows: list = wmctl_wrapper.get_running_windows()
     x_session_config: XSessionConfig = XSessionConfigObject.convert_wmctl_result_2_list(running_windows,
                                                                                         remove_duplicates_by_pid)
-    print('Got the process list according to wmctl: %s' + json.dumps(x_session_config, default=lambda o: o.__dict__))
+    print('Got the process list according to wmctl: %s' % json.dumps(x_session_config, default=lambda o: o.__dict__))
     x_session_config_objects: list[XSessionConfigObject] = x_session_config.x_session_config_objects
     for idx, sd in enumerate(x_session_config_objects):
         process = psutil.Process(sd.pid)
@@ -56,8 +56,9 @@ def get_session_details(remove_duplicates_by_pid=True,
         sd.cmd = process.cmdline()
         sd.process_create_time = datetime.datetime.fromtimestamp(process.create_time()).strftime("%Y-%m-%d %H:%M:%S")
 
-    x_session_config.x_session_config_objects[:] = \
-        [session for session in x_session_config_objects if not session_filter(session)]
+    if session_filter is not None:
+        x_session_config.x_session_config_objects[:] = \
+            [session for session in x_session_config_objects if not session_filter(session)]
 
     print('Complete the process list according to psutil: %s' %
           json.dumps(x_session_config, default=lambda o: o.__dict__))
