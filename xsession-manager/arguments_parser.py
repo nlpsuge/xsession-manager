@@ -25,6 +25,14 @@ class ArgumentsParser:
         parser.add_argument('-l', '--list', action='store_true', help='List the sessions.')
         parser.add_argument('-t', '--detail', help='Check out the details of a session.')
 
+        # -x [<window_id>|<pid>|<app_name> or <title_name>]
+        parser.add_argument('-x', '--exclude',
+                            # Require at least one value
+                            nargs='+',
+                            help='Exclude apps from the operation according to '
+                                 '<window_id>, <pid>, <app_name> or <title_name>. '
+                                 'Require at least one value')
+
         if len(sys.argv) == 1:
             print('No arguments provided.\n')
             parser.print_help(sys.stderr)

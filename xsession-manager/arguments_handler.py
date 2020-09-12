@@ -1,16 +1,16 @@
 import sys
-from collections import Iterable
-from time import sleep
 
 from types import SimpleNamespace as Namespace
 
 import argparse
 
 import xsession_manager
+from session_filter import SessionFilter
 from settings import constants
 from settings.constants import Locations
 from settings.xsession_config import XSessionConfigObject, XSessionConfig
 from utils import string_utils, wmctl_wrapper
+from utils.number_utils import is_int, is_hexadecimal
 from xsession_manager import save_session, restore_session
 
 
@@ -76,14 +76,39 @@ def wait_for_answer():
         sys.exit(1)
 
 
+class ExcludeSessionFilter(SessionFilter):
+
+    excludes: list
+
+    def __init__(self, excludes):
+        self.excludes = excludes
+
+    def __call__(self, session: XSessionConfigObject):
+        for exclude in self.excludes:
+            ii, value = is_int(exclude)
+            if ii and value == session.pid:
+                return True
+
+            ih, value = is_hexadecimal(exclude)
+            if ih and value == session.window_id:
+                return True
+
+            if exclude.lower() in session.app_name.lower() \
+                    or exclude in session.window_title.lower():
+                return True
+
+        return super().__call__(session)
+
+
 def handle_arguments(args: Namespace):
-    session_name_for_saving = args.save
-    session_name_for_restoring = args.restore
+    session_name_for_saving: str = args.save
+    session_name_for_restoring: str = args.restore
     list_sessions = args.list
     detail = args.detail
-    close_all = args.close_all
+    close_all: bool = args.close_all
     pop_up_a_dialog_to_restore = args.p
-    restoring_interval = args.restoring_interval
+    restoring_interval: int = args.restoring_interval
+    exclude: list = args.exclude
 
     if session_name_for_saving:
         print(constants.Prompts.MSG_SAVE)
@@ -98,13 +123,9 @@ def handle_arguments(args: Namespace):
     if close_all:
         print(constants.Prompts.MSG_CLOSE_ALL_WINDOWS)
         wait_for_answer()
-        sessions: list[XSessionConfigObject] = \
-            xsession_manager.get_session_details(False).x_session_config_objects
-        sessions.reverse()
-        for session in sessions:
-            print('Closing %s(%s %s).' % (session.app_name, session.window_id, session.pid))
-            wmctl_wrapper.close_window_gracefully(session.window_id)
-            sleep(0.25)
-
+        xsession_manager.close_windows(ExcludeSessionFilter(exclude))
         print('Done!')
+
+
+
 

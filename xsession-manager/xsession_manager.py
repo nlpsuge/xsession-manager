@@ -7,13 +7,14 @@ from types import SimpleNamespace as Namespace
 
 import psutil
 
+from session_filter import SessionFilter
 from settings.constants import Locations
 from settings.xsession_config import XSessionConfig, XSessionConfigObject
 from utils import wmctl_wrapper, subprocess_utils
 
 
-def save_session(session_name: str):
-    x_session_config = get_session_details()
+def save_session(session_name: str, session_filter: SessionFilter=None):
+    x_session_config = get_session_details(session_filter=session_filter)
     x_session_config.session_name = session_name
 
     session_path = Path(Locations.BASE_LOCATION_OF_SESSIONS, session_name)
@@ -34,25 +35,32 @@ def save_session(session_name: str):
     print('Done!')
 
 
-def get_session_details(remove_duplicates_by_pid=True) -> XSessionConfig:
-    
+def get_session_details(remove_duplicates_by_pid=True,
+                        session_filter: SessionFilter=None) -> XSessionConfig:
+
     """
-    Get the current running session details, including app name, process id, 
+    Get the current running session details, including app name, process id,
     window position, command line etc of each app. See XSessionConfigObject for more information.
-    
+
     :return: the current running session details
     """
-    
+
     running_windows: list = wmctl_wrapper.get_running_windows()
     x_session_config: XSessionConfig = XSessionConfigObject.convert_wmctl_result_2_list(running_windows,
                                                                                         remove_duplicates_by_pid)
-    print('Got the process list according to wmctl: ' + str(x_session_config))
-    for sd in x_session_config.x_session_config_objects:
+    print('Got the process list according to wmctl: %s' + json.dumps(x_session_config, default=lambda o: o.__dict__))
+    x_session_config_objects: list[XSessionConfigObject] = x_session_config.x_session_config_objects
+    for idx, sd in enumerate(x_session_config_objects):
         process = psutil.Process(sd.pid)
         sd.app_name = process.name()
         sd.cmd = process.cmdline()
         sd.process_create_time = datetime.datetime.fromtimestamp(process.create_time()).strftime("%Y-%m-%d %H:%M:%S")
-    print('Complete the process list according to psutil: ' + str(x_session_config))
+
+    x_session_config.x_session_config_objects[:] = \
+        [session for session in x_session_config_objects if not session_filter(session)]
+
+    print('Complete the process list according to psutil: %s' %
+          json.dumps(x_session_config, default=lambda o: o.__dict__))
     return x_session_config
 
 
@@ -109,3 +117,15 @@ def restore_session(session_name, restoring_interval=2):
 
                 sleep(restoring_interval)
             print('Done!')
+
+
+def close_windows(exclude_session_filter):
+    sessions: list[XSessionConfigObject] = \
+        get_session_details(remove_duplicates_by_pid=False,
+                            session_filter=exclude_session_filter).x_session_config_objects
+    sessions.reverse()
+    for session in sessions:
+        print('Closing %s(%s %s).' % (session.app_name, session.window_id, session.pid))
+        wmctl_wrapper.close_window_gracefully(session.window_id)
+        sleep(0.25)
+
