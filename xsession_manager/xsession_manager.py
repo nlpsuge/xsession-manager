@@ -51,10 +51,16 @@ def get_session_details(remove_duplicates_by_pid=True,
     print('Got the process list according to wmctl: %s' % json.dumps(x_session_config, default=lambda o: o.__dict__))
     x_session_config_objects: list[XSessionConfigObject] = x_session_config.x_session_config_objects
     for idx, sd in enumerate(x_session_config_objects):
-        process = psutil.Process(sd.pid)
-        sd.app_name = process.name()
-        sd.cmd = process.cmdline()
-        sd.process_create_time = datetime.datetime.fromtimestamp(process.create_time()).strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            process = psutil.Process(sd.pid)
+            sd.app_name = process.name()
+            sd.cmd = process.cmdline()
+            sd.process_create_time = datetime.datetime.fromtimestamp(process.create_time()).strftime("%Y-%m-%d %H:%M:%S")
+        except psutil.NoSuchProcess as e:
+            print('Failed to get process [%s] info using psutil due to: %s' % (sd, str(e)))
+            sd.app_name = ''
+            sd.cmd = []
+            sd.process_create_time = None
 
     if session_filter is not None:
         x_session_config.x_session_config_objects[:] = \
