@@ -111,9 +111,10 @@ def handle_arguments(args: Namespace):
             print('Done!')
 
     if pop_up_a_dialog_to_restore:
-        create_askyesno_dialog(constants.Prompts.MSG_POP_UP_A_DIALOG_TO_RESTORE
+        answer = create_askyesno_dialog(constants.Prompts.MSG_POP_UP_A_DIALOG_TO_RESTORE
                                % pop_up_a_dialog_to_restore)
-        restore_session(pop_up_a_dialog_to_restore, restoring_interval)
+        if answer:
+            restore_session(pop_up_a_dialog_to_restore, restoring_interval)
 
 
 

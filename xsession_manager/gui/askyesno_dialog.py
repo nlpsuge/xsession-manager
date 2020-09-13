@@ -57,11 +57,15 @@ def create_askyesno_dialog(label_text: str, choose_yes_if_timeout: int=10):
         # Display the dialog in the center of screen
         root.wait_window(d)
         print('Your answer is: %s' % d.answer)
+        return d.answer
 
     root = tk.Tk()
     root.title('Question')
     root.withdraw()
-    popup_question_dialog()
+    answer = popup_question_dialog()
+    if answer and answer == 'Yes':
+        return True
+    return False
 
 
 def _place_in_center(root):
