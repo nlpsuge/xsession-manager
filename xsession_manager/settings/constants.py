@@ -6,6 +6,7 @@ class Prompts:
     MSG_SAVE = 'Do you want to save the current session?'
     MSG_RESTORE = 'Do you want to restore the session named %s?'
     MSG_CLOSE_ALL_WINDOWS = 'Do you want to close windows?'
+    MSG_POP_UP_A_DIALOG_TO_RESTORE = 'Do you want to restore the session named %s?'
 
 
 class Locations:

@@ -20,7 +20,9 @@ class ArgumentsParser:
                             help='Specify the interval between restoring applications, in seconds. '
                                  'The default is 2 seconds. ')
 
-        parser.add_argument('-p', action='store_true', help='Pop a dialog to ask user whether to restore a X session.')
+        parser.add_argument('-pr',
+                            nargs='?',
+                            help='Pop up a dialog to ask user whether to restore a X session.')
 
         parser.add_argument('-l', '--list', action='store_true', help='List the sessions.')
         parser.add_argument('-t', '--detail', help='Check out the details of a session.')

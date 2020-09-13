@@ -5,13 +5,14 @@ from types import SimpleNamespace as Namespace
 import argparse
 
 import xsession_manager
+from gui.askyesno_dialog import create_askyesno_dialog
 from session_filter import SessionFilter
 from settings import constants
 from settings.constants import Locations
-from settings.xsession_config import XSessionConfigObject, XSessionConfig
+from settings.xsession_config import XSessionConfigObject
 from utils import string_utils, wmctl_wrapper
 from utils.number_utils import is_int, is_hexadecimal
-from xsession_manager import save_session, restore_session
+from xsession_manager import save_session, restore_session, close_windows
 
 
 def check_and_reset_args(args: Namespace):
@@ -20,7 +21,7 @@ def check_and_reset_args(args: Namespace):
     list_sessions = args.list
     detail = args.detail
     close_all = args.close_all
-    pop_up_a_dialog_to_restore = args.p
+    pop_up_a_dialog_to_restore = args.pr
 
     # Need to deal with this kind of case when user type -s' '
     argv = [a.strip() for a in sys.argv[1:]]
@@ -33,6 +34,10 @@ def check_and_reset_args(args: Namespace):
             and ('-r' in argv or '--restore' in argv):
         args.restore = Locations.DEFAULT_SESSION_NAME
         restore = args.restore
+    if string_utils.empty_string(pop_up_a_dialog_to_restore) \
+            and ('-pr' in argv):
+        args.pr = Locations.DEFAULT_SESSION_NAME
+        pop_up_a_dialog_to_restore = args.pr
 
     print('Namespace object after handling by this program: ' + str(args))
 
@@ -44,7 +49,7 @@ def check_and_reset_args(args: Namespace):
             raise argparse.ArgumentTypeError('argument -t/--detail : '
                                              'not allowed with any argument of -s/--save, -r/--restore, -c/--close-all')
         if pop_up_a_dialog_to_restore:
-            raise argparse.ArgumentTypeError('argument -p : '
+            raise argparse.ArgumentTypeError('argument -pr : '
                                              'not allowed with any argument of -s/--save, -r/--restore, -c/--close-all')
 
     if close_all is False \
@@ -106,7 +111,7 @@ def handle_arguments(args: Namespace):
     list_sessions = args.list
     detail = args.detail
     close_all: bool = args.close_all
-    pop_up_a_dialog_to_restore = args.p
+    pop_up_a_dialog_to_restore = args.pr
     restoring_interval: int = args.restoring_interval
     exclude: list = args.exclude
 
@@ -123,8 +128,14 @@ def handle_arguments(args: Namespace):
     if close_all:
         print(constants.Prompts.MSG_CLOSE_ALL_WINDOWS)
         wait_for_answer()
-        xsession_manager.close_windows(ExcludeSessionFilter(exclude))
+        close_windows(ExcludeSessionFilter(exclude))
         print('Done!')
+
+    if pop_up_a_dialog_to_restore:
+        create_askyesno_dialog(constants.Prompts.MSG_POP_UP_A_DIALOG_TO_RESTORE
+                               % pop_up_a_dialog_to_restore)
+        restore_session(pop_up_a_dialog_to_restore, restoring_interval)
+
 
 
 
