@@ -6,12 +6,10 @@ import argparse
 
 import xsession_manager
 from gui.askyesno_dialog import create_askyesno_dialog
-from session_filter import SessionFilter
+from session_filter import ExcludeSessionFilter, IncludeSessionFilter
 from settings import constants
 from settings.constants import Locations
-from settings.xsession_config import XSessionConfigObject
 from utils import string_utils, wmctl_wrapper
-from utils.number_utils import is_int, is_hexadecimal
 from xsession_manager import save_session, restore_session, close_windows
 
 
@@ -52,7 +50,7 @@ def check_and_reset_args(args: Namespace):
             raise argparse.ArgumentTypeError('argument -pr : '
                                              'not allowed with any argument of -s/--save, -r/--restore, -c/--close-all')
 
-    if close_all is False \
+    if close_all is None \
             and not string_utils.empty_string(restore):
         # get the opening windows via wmctl
         print("Opening windows list:")
@@ -81,36 +79,12 @@ def wait_for_answer():
         sys.exit(1)
 
 
-class ExcludeSessionFilter(SessionFilter):
-
-    excludes: list
-
-    def __init__(self, excludes):
-        self.excludes = excludes
-
-    def __call__(self, session: XSessionConfigObject):
-        for exclude in self.excludes:
-            ii, value = is_int(exclude)
-            if ii and value == session.pid:
-                return True
-
-            ih, value = is_hexadecimal(exclude)
-            if ih and value == session.window_id:
-                return True
-
-            if exclude.lower() in session.app_name.lower() \
-                    or exclude in session.window_title.lower():
-                return True
-
-        return super().__call__(session)
-
-
 def handle_arguments(args: Namespace):
     session_name_for_saving: str = args.save
     session_name_for_restoring: str = args.restore
     list_sessions = args.list
     detail = args.detail
-    close_all: bool = args.close_all
+    close_all: list = args.close_all
     pop_up_a_dialog_to_restore = args.pr
     restoring_interval: int = args.restoring_interval
     exclude: list = args.exclude
@@ -125,11 +99,16 @@ def handle_arguments(args: Namespace):
         wait_for_answer()
         restore_session(session_name_for_restoring, restoring_interval)
 
-    if close_all:
-        print(constants.Prompts.MSG_CLOSE_ALL_WINDOWS)
-        wait_for_answer()
-        close_windows(ExcludeSessionFilter(exclude))
-        print('Done!')
+    if close_all is not None:
+        if len(close_all) == 0:  # close all windows
+            print(constants.Prompts.MSG_CLOSE_ALL_WINDOWS)
+            wait_for_answer()
+            # TODO Order sensitive?
+            close_windows([ExcludeSessionFilter(exclude)])
+            print('Done!')
+        else:  # close specified windows
+            close_windows([IncludeSessionFilter(close_all), ExcludeSessionFilter(exclude)])
+            print('Done!')
 
     if pop_up_a_dialog_to_restore:
         create_askyesno_dialog(constants.Prompts.MSG_POP_UP_A_DIALOG_TO_RESTORE

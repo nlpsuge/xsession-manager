@@ -10,7 +10,12 @@ class ArgumentsParser:
                             nargs='?',
                             help=
                             'Save the current session. Save to the default session if not specified a session name.')
-        parser.add_argument('-c', '--close-all', action='store_true', help='Close the current session gracefully.')
+        parser.add_argument('-c', '--close-all',
+                            nargs='*',
+                            help='Close the windows gracefully. '
+                                 'Close all windows if only -c/--close-all is present. '
+                                 'You can specify arguments to tell me which windows should be closed, '
+                                 'that is <window_id>, <pid>, <app_name> or <title_name> exactly the same as -x.')
         parser.add_argument('-r', '--restore',
                             nargs='?',
                             help='Restore a session gracefully. '
