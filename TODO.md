@@ -1,0 +1,23 @@
+Note that this to-do list may not cover all cases.
+
+- [ ] Support WINE-based application
+- [ ] Avoid saving system's applications
+- [x] Store settings in the json format file
+- [ ] Store settings in a kind of DB? No need for now, I think
+- [x] Save a session (-a/--save)
+- [x] Restore a session (-r/--restore)
+- [x] Close a session (-c/--close-all)
+- [ ] Close selected apps (Split --close-all to --close [all|select]?)
+- [ ] Exclude apps when operating sessions (-x/--exclude) when:
+  - [ ] Saving a session
+  - [ ] Restoring a session
+  - [x] Closing a session
+- [ ] List sessions (-l/--list)
+- [ ] Query the details given a session name (-t/--detail)
+- [ ] Pop a dialog based on tkinter to ask user whether to restore a session (-p)
+- [ ] Could setup settings in terminal
+- [ ] GTK/QT -based gui - in a separate project maybe.
+- [ ] Add tests based on pytest
+- [ ] Improve code
+- [ ] Add missing configuration files
+- [ ] Automatically click OK button while closing a window
