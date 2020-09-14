@@ -70,12 +70,12 @@ def check_and_reset_args(args: Namespace):
 def wait_for_answer():
     answer = input("Please type your answer (y/N): ")
     while True:
-        if str.lower(answer) not in ['n', 'y']:
+        if str.lower(answer.strip()) not in ['n', 'y', '']:
             answer = input("Please type your answer again (y/N): ")
         else:
             break
-    print('Your answer is: ' + answer)
-    if str.lower(answer) == 'n':
+    print('Your answer is: %s' % 'N' if answer.strip() == '' else answer.strip())
+    if str.lower(answer.strip()) in ['n', '']:
         sys.exit(1)
 
 
