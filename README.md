@@ -2,6 +2,12 @@
 
 Python-based command line tool to save and restore sessions for X11 desktops like Gnome, 
 and other features to maintain sessions. The project is currently in an early stage of development.
+
+This project was written in ```Bash``` originally. But now I'm completely rewriting it in ```Python```
+which obviously makes it way more flexible, extensible.
+
+This project relies on [wmctrl](http://tripie.sweb.cz/utils/wmctrl/), which is why you have to install it beforehand.
+
 ## Install
 
 
