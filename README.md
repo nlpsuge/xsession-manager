@@ -1,65 +1,57 @@
-# [xsession-manager](https://github.com/nlpsuge/MyShell/blob/master/xsession-manager)
+# [xsession-manager](https://github.com/nlpsuge/xsession-manager)
 
-Save X session and restore it later. This tool relies on [wmctrl](http://tripie.sweb.cz/utils/wmctrl/).
+Python-based command line tool to save and restore sessions for X11 desktops like Gnome, 
+and other features to maintain sessions. The project is currently in an early stage of development.
+
+This project was written in ```Bash``` originally. But now I'm completely rewriting it in ```Python```
+which obviously makes it way more flexible, extensible.
+
+This project relies on [wmctrl](http://tripie.sweb.cz/utils/wmctrl/), which is why you have to install it beforehand.
 
 ## Install
-```bash
-git clone https://github.com/nlpsuge/xsession-manager.git
-cd xsession-manager
-chmod +x xsession-manager
-# Then copy xsession-manager to somewhere you prefer, like /usr/local/bin.
-cp xsession-manager /usr/local/bin
-```
+
 
 ## Usage:
 
-### Save the current X session
-```bash
-xsession-manager -s
 ```
-or
-```bash
-xsession-manager --save
+usage: main.py [-h] [-s [SAVE]] [-c [CLOSE_ALL [CLOSE_ALL ...]]]
+               [-r [RESTORE]] [-ri RESTORING_INTERVAL] [-pr [PR]] [-l]
+               [-t DETAIL] [-x EXCLUDE [EXCLUDE ...]]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -s [SAVE], --save [SAVE]
+                        Save the current session. Save to the default session
+                        if not specified a session name.
+  -c [CLOSE_ALL [CLOSE_ALL ...]], --close-all [CLOSE_ALL [CLOSE_ALL ...]]
+                        Close the windows gracefully. Close all windows if
+                        only -c/--close-all is present. You can specify
+                        arguments to tell me which windows should be closed,
+                        that is <window_id>, <pid>, <app_name> or <title_name>
+                        exactly the same as -x.
+  -r [RESTORE], --restore [RESTORE]
+                        Restore a session gracefully. Restore the default
+                        session if not specified a session name.
+  -ri RESTORING_INTERVAL, --restoring-interval RESTORING_INTERVAL
+                        Specify the interval between restoring applications,
+                        in seconds. The default is 2 seconds.
+  -pr [PR]              Pop up a dialog to ask user whether to restore a X
+                        session.
+  -l, --list            List the sessions.
+  -t DETAIL, --detail DETAIL
+                        Check out the details of a session.
+  -x EXCLUDE [EXCLUDE ...], --exclude EXCLUDE [EXCLUDE ...]
+                        Exclude apps from the operation according to
+                        <window_id>, <pid>, <app_name> or <title_name>.
+                        Require at least one value
 ```
 
-### Restore the previous X session
-```bash
-xsession-manager -r
-```
-or
-```bash
-xsession-manager --reopen
-```
-or pop a dialog to ask to restore the previous X session. 
-Note that the default countdown is 5 seconds giving you some time to cancel this operation.
-```bash
-xsession-manager -d
-```
-
-### Close all windows
-```bash
-xsession-manager -C
-```
-or
-```bash
-xsession-manager --close-all
-```
-
-### List the details of the previous X session
-```bash
-xsession-manager -l
-```
-or
-```bash
-xsession-manager --list
-```
 ## If you want to restore the previous X session automatically after login
 Here is a solution. If you are using Fedora, create a file named ```auto-restore-working-state.desktop``` and the ```Exec``` should be:
 ```bash
-xsession-manager -d
+xsession-manager -pr
 ```
 Then put this file into ```~/.config/autostart```.
 
 ## Todo:
-- [X] Support WINE-based application
-- [ ] Avoid saving system's applications
+[TODO](https://github.com/nlpsuge/xsession-manager/blob/master/TODO.md)
