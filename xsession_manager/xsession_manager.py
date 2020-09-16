@@ -19,15 +19,21 @@ from utils import wmctl_wrapper, subprocess_utils
 class XSessionManager:
 
     session_filters: List[SessionFilter]
+    base_location_of_sessions: str
+    base_location_of_backup_sessions: str
 
-    def __init__(self, session_filters: List[SessionFilter]=None):
+    def __init__(self, session_filters: List[SessionFilter]=None,
+                 base_location_of_sessions: str=Locations.BASE_LOCATION_OF_SESSIONS,
+                 base_location_of_backup_sessions: str=Locations.BASE_LOCATION_OF_BACKUP_SESSIONS):
         self.session_filters = session_filters
+        self.base_location_of_sessions = base_location_of_sessions
+        self.base_location_of_backup_sessions = base_location_of_backup_sessions
 
     def save_session(self, session_name: str, session_filter: SessionFilter=None):
         x_session_config = self.get_session_details(session_filters=[session_filter])
         x_session_config.session_name = session_name
 
-        session_path = Path(Locations.BASE_LOCATION_OF_SESSIONS, session_name)
+        session_path = Path(self.base_location_of_sessions, session_name)
         print('Saving the session to: ' + str(session_path))
 
         if not session_path.parent.exists():
@@ -88,7 +94,7 @@ class XSessionManager:
             print('Backing up session located [%s] ' % original_session_path)
             namespace_objs = json.load(file, object_hook=lambda d: Namespace(**d))
         current_time_str_as_backup_id = backup_time.strftime("%Y%m%d%H%M%S%f")
-        backup_session_path = Path(Locations.BASE_LOCATION_OF_BACKUP_SESSIONS,
+        backup_session_path = Path(self.base_location_of_backup_sessions,
                                    os.path.basename(original_session_path) + '.backup-' + current_time_str_as_backup_id)
         if not backup_session_path.parent.exists():
             backup_session_path.parent.mkdir(parents=True, exist_ok=True)
@@ -107,7 +113,7 @@ class XSessionManager:
                     sort_keys=True))
 
     def restore_session(self, session_name, restoring_interval=2):
-        session_path = Path(Locations.BASE_LOCATION_OF_SESSIONS, session_name)
+        session_path = Path(self.base_location_of_sessions, session_name)
         if not session_path.exists():
             raise FileNotFoundError('Session file [%s] was not found.' % session_path)
 
