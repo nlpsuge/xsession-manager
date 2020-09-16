@@ -128,6 +128,7 @@ def restore_session(session_name, restoring_interval=2):
                 subprocess_utils.run_cmd(cmd)
                 print('Success to restore application:     [%s]' % app_name)
 
+                # Wait some time, in case of freezing the entire system
                 sleep(restoring_interval)
             print('Done!')
 
