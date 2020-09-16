@@ -22,6 +22,9 @@ def has_any_running_window() -> bool:
     return len(running_windows) != 0
 
 
-def close_window_gracefully(window_id: str):
+def close_window_gracefully_async(window_id: str):
     subprocess.Popen(['wmctrl', '-ic', window_id])
 
+
+def close_window_gracefully_sync(window_id: str):
+    subprocess.check_output(['wmctrl', '-ic', window_id])

@@ -1,6 +1,8 @@
 import datetime
 import json
 import os
+from itertools import groupby
+from operator import attrgetter
 from pathlib import Path
 from time import time, sleep
 from types import SimpleNamespace as Namespace
@@ -134,9 +136,24 @@ def close_windows(session_filters: List[SessionFilter]):
     sessions: List[XSessionConfigObject] = \
         get_session_details(remove_duplicates_by_pid=False,
                             session_filters=session_filters).x_session_config_objects
-    sessions.reverse()
-    for session in sessions:
-        print('Closing %s(%s %s).' % (session.app_name, session.window_id, session.pid))
-        wmctl_wrapper.close_window_gracefully(session.window_id)
+
+    sessions.sort(key=attrgetter('pid'))
+    for pid, group_by_pid in groupby(sessions, key=attrgetter('pid')):
+        a_process_with_many_windows = list(group_by_pid)
+        if len(a_process_with_many_windows) > 1:
+            a_process_with_many_windows.sort(key=attrgetter('window_id'), reverse=True)
+            # Close one application's windows one by one from the last one
+            for session in a_process_with_many_windows:
+                print('Closing %s(%s %s).' % (session.app_name, session.window_id, session.pid))
+                # No need to catch the CalledProcessError for now, I think.
+                # In one case, if failed to close one window via 'wmctrl -ic window_id', the '$?' will be 0.
+                # In this case, this application may not be closed successfully.
+                wmctl_wrapper.close_window_gracefully_sync(session.window_id)
+        else:
+            session = a_process_with_many_windows[0]
+            print('Closing %s(%s %s).' % (session.app_name, session.window_id, session.pid))
+            wmctl_wrapper.close_window_gracefully_async(session.window_id)
+
+        # Wait some time, in case of freezing the entire system
         sleep(0.25)
 
