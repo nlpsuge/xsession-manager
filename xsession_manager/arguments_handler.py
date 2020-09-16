@@ -4,13 +4,12 @@ from types import SimpleNamespace as Namespace
 
 import argparse
 
-import xsession_manager
 from gui.askyesno_dialog import create_askyesno_dialog
 from session_filter import ExcludeSessionFilter, IncludeSessionFilter
 from settings import constants
 from settings.constants import Locations
 from utils import string_utils, wmctl_wrapper
-from xsession_manager import save_session, restore_session, close_windows
+from xsession_manager import XSessionManager
 
 
 def check_and_reset_args(args: Namespace):
@@ -92,29 +91,34 @@ def handle_arguments(args: Namespace):
     if session_name_for_saving:
         print(constants.Prompts.MSG_SAVE)
         wait_for_answer()
-        save_session(session_name_for_saving)
+        xsm = XSessionManager()
+        xsm.save_session(session_name_for_saving)
 
     if session_name_for_restoring:
         print(constants.Prompts.MSG_RESTORE % session_name_for_restoring)
         wait_for_answer()
-        restore_session(session_name_for_restoring, restoring_interval)
+        xsm = XSessionManager()
+        xsm.restore_session(session_name_for_restoring, restoring_interval)
 
     if close_all is not None:
         if len(close_all) == 0:  # close all windows
             print(constants.Prompts.MSG_CLOSE_ALL_WINDOWS)
             wait_for_answer()
             # TODO Order sensitive?
-            close_windows([ExcludeSessionFilter(exclude)])
+            xsm = XSessionManager([ExcludeSessionFilter(exclude)])
+            xsm.close_windows()
             print('Done!')
         else:  # close specified windows
-            close_windows([IncludeSessionFilter(close_all), ExcludeSessionFilter(exclude)])
+            xsm = XSessionManager([IncludeSessionFilter(close_all), ExcludeSessionFilter(exclude)])
+            xsm.close_windows()
             print('Done!')
 
     if pop_up_a_dialog_to_restore:
         answer = create_askyesno_dialog(constants.Prompts.MSG_POP_UP_A_DIALOG_TO_RESTORE
-                               % pop_up_a_dialog_to_restore)
+                                        % pop_up_a_dialog_to_restore)
         if answer:
-            restore_session(pop_up_a_dialog_to_restore, restoring_interval)
+            xsm = XSessionManager()
+            xsm.restore_session(pop_up_a_dialog_to_restore, restoring_interval)
 
 
 
