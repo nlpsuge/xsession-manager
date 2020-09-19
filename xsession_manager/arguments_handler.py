@@ -1,13 +1,17 @@
+import json
 import sys
+from pathlib import Path
 
 from types import SimpleNamespace as Namespace
 
 import argparse
+from typing import List
 
 from gui.askyesno_dialog import create_askyesno_dialog
 from session_filter import ExcludeSessionFilter, IncludeSessionFilter
 from settings import constants
 from settings.constants import Locations
+from settings.xsession_config import XSessionConfigObject, XSessionConfig
 from utils import string_utils, wmctl_wrapper
 from xsession_manager import XSessionManager
 
@@ -82,7 +86,7 @@ def handle_arguments(args: Namespace):
     session_name_for_saving: str = args.save
     session_name_for_restoring: str = args.restore
     list_sessions = args.list
-    detail = args.detail
+    session_details = args.detail
     close_all: list = args.close_all
     pop_up_a_dialog_to_restore = args.pr
     restoring_interval: int = args.restoring_interval
@@ -119,6 +123,59 @@ def handle_arguments(args: Namespace):
         if answer:
             xsm = XSessionManager()
             xsm.restore_session(pop_up_a_dialog_to_restore, restoring_interval)
+
+    if list_sessions:
+        import os
+        walk: (list, list, str) = os.walk(constants.Locations.BASE_LOCATION_OF_SESSIONS)
+        for root, dirs, files in walk:
+            # files.sort()
+            for file in files:
+                with open(Path(root, file), 'r') as f:
+                    namespace_objs: XSessionConfig = json.load(f, object_hook=lambda d: Namespace(**d))
+                    print(namespace_objs.session_name, namespace_objs.session_create_time, str(Path(root, file)),
+                          sep='  ')
+
+            break
+
+    if session_details:
+        session_path = Path(constants.Locations.BASE_LOCATION_OF_SESSIONS, session_details)
+        print('Look for session located [%s] ' % session_path)
+        if not session_path.exists():
+            raise FileNotFoundError('Session file [%s] was not found.' % session_path)
+
+        print()
+        count = 0
+        with open(session_path, 'r') as file:
+            namespace_objs: XSessionConfig = json.load(file, object_hook=lambda d: Namespace(**d))
+            print('session name: %s' % namespace_objs.session_name)
+            print('location: %s' % str(session_path))
+            print('created at: %s' % namespace_objs.session_create_time)
+
+            x_session_config_objects: List[XSessionConfigObject] = namespace_objs.x_session_config_objects
+            # Print data according to declared order
+            ordered_variables = vars(XSessionConfigObject)['__annotations__']
+            for x_session_config_object in x_session_config_objects:
+                count = count + 1
+                print('  %d.' % count)
+                vars_in_x_session_config_object = vars(x_session_config_object)
+                keys_in_x_session_config_object = vars_in_x_session_config_object.keys()
+                for ordered_key in ordered_variables.keys():
+                    if ordered_key in keys_in_x_session_config_object:
+                        value = vars_in_x_session_config_object[ordered_key]
+                        if type(value) is Namespace:
+                            # Print data according to declared order
+                            _ordered_variables = vars(XSessionConfigObject.WindowPosition)['__annotations__']
+                            position_info = vars(value)
+                            position_values = []
+                            for _ordered_key in _ordered_variables.keys():
+                                position_values.append(position_info[_ordered_key])
+                            print('  %s: %s' % (ordered_key.replace('_', ' '), ' '.join(position_values)))
+                        elif type(value) is list:
+                            print('  %s: %s' % (ordered_key.replace('_', ' '), ' '.join(value)))
+                            pass
+                        else:
+                            print('  %s: %s' % (ordered_key.replace('_', ' '), value))
+                print()
 
 
 
