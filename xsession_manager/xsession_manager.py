@@ -92,7 +92,7 @@ class XSessionManager:
         backup_time = datetime.datetime.fromtimestamp(time())
         with open(original_session_path, 'r') as file:
             print('Backing up session located [%s] ' % original_session_path)
-            namespace_objs = json.load(file, object_hook=lambda d: Namespace(**d))
+            namespace_objs: XSessionConfig = json.load(file, object_hook=lambda d: Namespace(**d))
         current_time_str_as_backup_id = backup_time.strftime("%Y%m%d%H%M%S%f")
         backup_session_path = Path(self.base_location_of_backup_sessions,
                                    os.path.basename(original_session_path) + '.backup-' + current_time_str_as_backup_id)
@@ -119,13 +119,14 @@ class XSessionManager:
 
         with open(session_path, 'r') as file:
             print('Restoring session located [%s] ' % session_path)
-            namespace_objs = json.load(file, object_hook=lambda d: Namespace(**d))
+            namespace_objs: XSessionConfig = json.load(file, object_hook=lambda d: Namespace(**d))
             # Note: os.fork() does not support the Windows
             pid = os.fork()
             # Run command lines in the child process
             # TODO: I'm not sure if this method works well and is the best practice
             if pid == 0:
-                for namespace_obj in namespace_objs.x_session_config_objects:
+                x_session_config_objects: List[XSessionConfigObject] = namespace_objs.x_session_config_objects
+                for namespace_obj in x_session_config_objects:
                     cmd: list = namespace_obj.cmd
                     app_name: str = namespace_obj.app_name
                     print('Restoring application:              [%s]' % app_name)
