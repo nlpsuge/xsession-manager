@@ -102,7 +102,8 @@ def handle_arguments(args: Namespace):
     if session_name_for_restoring:
         print(constants.Prompts.MSG_RESTORE % session_name_for_restoring)
         wait_for_answer()
-        xsm = XSessionManager()
+        xsm = XSessionManager([IncludeSessionFilter(include),
+                               ExcludeSessionFilter(exclude)])
         xsm.restore_session(session_name_for_restoring, restoring_interval)
 
     if close_all is not None:

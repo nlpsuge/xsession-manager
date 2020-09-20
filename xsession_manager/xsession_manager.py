@@ -126,6 +126,18 @@ class XSessionManager:
             # TODO: I'm not sure if this method works well and is the best practice
             if pid == 0:
                 x_session_config_objects: List[XSessionConfigObject] = namespace_objs.x_session_config_objects
+
+                if self.session_filters is not None:
+                    for session_filter in self.session_filters:
+                        if session_filter is None:
+                            continue
+                        x_session_config_objects[:] = session_filter(x_session_config_objects)
+
+                if len(x_session_config_objects) == 0:
+                    print('No application to restore.')
+                    print('Done!')
+                    return
+
                 for namespace_obj in x_session_config_objects:
                     cmd: list = namespace_obj.cmd
                     app_name: str = namespace_obj.app_name
@@ -146,6 +158,10 @@ class XSessionManager:
         sessions: List[XSessionConfigObject] = \
             self.get_session_details(remove_duplicates_by_pid=False,
                                      session_filters=self.session_filters).x_session_config_objects
+
+        if len(sessions) == 0:
+            print('No application to close.')
+            return
 
         sessions.sort(key=attrgetter('pid'))
         for pid, group_by_pid in groupby(sessions, key=attrgetter('pid')):

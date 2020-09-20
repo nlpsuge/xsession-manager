@@ -8,10 +8,14 @@ Note that this to-do list may not cover all cases.
 - [x] Restore a session (-r/--restore)
 - [x] Close a session (-c/--close-all)
   - [x] Close selected apps (Split --close-all to --close [all|select]?)
-- [ ] Exclude apps when operating sessions (-x/--exclude) when:
-  - [ ] Saving a session
-  - [ ] Restoring a session
-  - [x] Closing a session
+- [ ] Add -x/--exclude option:
+  - [ ] Support saving a session
+  - [x] Support restoring a session
+  - [x] Support closing a session
+- [ ] Add -i/--include option
+  - [ ] Support saving a session
+  - [x] Support restoring a session
+  - [x] Support closing a session
 - [x] List sessions (-l/--list)
 - [x] Query the details given a session name (-t/--detail)
 - [x] Pop a dialog based on tkinter to ask user whether to restore a session (-p)
@@ -24,8 +28,5 @@ Note that this to-do list may not cover all cases.
 - [ ] Using a log framework instead of print
 - [ ] Provide -y/--yes option to answer 'yes' to all questions
   - [ ] Can not exit when using with `yes` command, pressing ctrl + c in terminal kill all applications
-- [x] Add -i/--include option
-  - [x] Support closing
-  - [ ] Support restoring
 - [ ] Move windows to the workspace that they belong in last time when restoring session.
    
