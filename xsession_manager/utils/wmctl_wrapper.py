@@ -28,3 +28,7 @@ def close_window_gracefully_async(window_id: str):
 
 def close_window_gracefully_sync(window_id: str):
     subprocess.check_output(['wmctrl', '-ic', window_id])
+
+
+def move_window_to(window_id, desktop_number):
+    subprocess.Popen(['wmctrl', '-ir', window_id, '-t', desktop_number])
