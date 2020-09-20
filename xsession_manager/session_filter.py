@@ -35,7 +35,7 @@ class ExcludeSessionFilter(SessionFilter):
         self.excludes = excludes
 
     def __call__(self, sessions: List[XSessionConfigObject]):
-        if self.excludes is None:
+        if self.excludes is None or len(self.excludes) == 0:
             return sessions
         return [session for session in sessions if not filter_session(session, self.excludes)]
 
@@ -48,6 +48,6 @@ class IncludeSessionFilter(SessionFilter):
         self.includes = includes
 
     def __call__(self, sessions: List[XSessionConfigObject]):
-        if self.includes is None:
+        if self.includes is None or len(self.includes) == 0:
             return sessions
         return [session for session in sessions if filter_session(session, self.includes)]

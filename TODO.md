@@ -23,4 +23,9 @@ Note that this to-do list may not cover all cases.
 - [ ] Automatically click OK button while closing a window
 - [ ] Using a log framework instead of print
 - [ ] Provide -y/--yes option to answer 'yes' to all questions
-  - [ ] Can not exit when using with `yes` command, pressing ctrl + c in terminal kill all applications 
+  - [ ] Can not exit when using with `yes` command, pressing ctrl + c in terminal kill all applications
+- [x] Add -i/--include option
+  - [x] Support closing
+  - [ ] Support restoring
+- [ ] Move windows to the workspace that they belong in last time when restoring session.
+   

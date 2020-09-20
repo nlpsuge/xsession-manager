@@ -39,6 +39,13 @@ class ArgumentsParser:
                             help='Exclude apps from the operation according to '
                                  '<window_id>, <pid>, <app_name> or <title_name>. '
                                  'Require at least one value')
+        # -i [<window_id>|<pid>|<app_name> or <title_name>]
+        parser.add_argument('-i', '--include',
+                            # Require at least one value
+                            nargs='+',
+                            help='Include apps from the operation according to '
+                                 '<window_id>, <pid>, <app_name> or <title_name>. '
+                                 'Require at least one value')
 
         if len(sys.argv) == 1:
             print('No arguments provided.\n')

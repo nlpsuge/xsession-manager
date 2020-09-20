@@ -91,6 +91,7 @@ def handle_arguments(args: Namespace):
     pop_up_a_dialog_to_restore = args.pr
     restoring_interval: int = args.restoring_interval
     exclude: list = args.exclude
+    include: list = args.include
 
     if session_name_for_saving:
         print(constants.Prompts.MSG_SAVE)
@@ -105,17 +106,14 @@ def handle_arguments(args: Namespace):
         xsm.restore_session(session_name_for_restoring, restoring_interval)
 
     if close_all is not None:
-        if len(close_all) == 0:  # close all windows
-            print(constants.Prompts.MSG_CLOSE_ALL_WINDOWS)
-            wait_for_answer()
-            # TODO Order sensitive?
-            xsm = XSessionManager([ExcludeSessionFilter(exclude)])
-            xsm.close_windows()
-            print('Done!')
-        else:  # close specified windows
-            xsm = XSessionManager([IncludeSessionFilter(close_all), ExcludeSessionFilter(exclude)])
-            xsm.close_windows()
-            print('Done!')
+        print(constants.Prompts.MSG_CLOSE_ALL_WINDOWS)
+        wait_for_answer()
+        # TODO Order sensitive?
+        xsm = XSessionManager([IncludeSessionFilter(close_all),
+                               IncludeSessionFilter(include),
+                               ExcludeSessionFilter(exclude)])
+        xsm.close_windows()
+        print('Done!')
 
     if pop_up_a_dialog_to_restore:
         answer = create_askyesno_dialog(constants.Prompts.MSG_POP_UP_A_DIALOG_TO_RESTORE
