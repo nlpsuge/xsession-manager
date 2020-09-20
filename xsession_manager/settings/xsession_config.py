@@ -45,7 +45,11 @@ class XSessionConfigObject(Base):
             window_position.height = window[6]
             config.window_position = window_position
             config.client_machine_name = window[7]
-            config.window_title = window[8]
+            # The title will be empty in some case.
+            # For instance:
+            # Open a non-existence.docx file using LibreOffice, a 'non-existence.docx does not exist.'
+            # dialog popups. This dialog has no title in the result of 'wmctl -lpG'.
+            config.window_title = window[8] if len(window) >= 9 else ''
 
             session_details.append(config)
 

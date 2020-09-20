@@ -12,8 +12,8 @@ Note that this to-do list may not cover all cases.
   - [ ] Saving a session
   - [ ] Restoring a session
   - [x] Closing a session
-- [ ] List sessions (-l/--list)
-- [ ] Query the details given a session name (-t/--detail)
+- [x] List sessions (-l/--list)
+- [x] Query the details given a session name (-t/--detail)
 - [x] Pop a dialog based on tkinter to ask user whether to restore a session (-p)
 - [ ] Could setup settings in terminal
 - [ ] GTK/QT -based gui - in a separate project maybe.
@@ -22,3 +22,5 @@ Note that this to-do list may not cover all cases.
 - [ ] Add missing configuration files
 - [ ] Automatically click OK button while closing a window
 - [ ] Using a log framework instead of print
+- [ ] Provide -y/--yes option to answer 'yes' to all questions
+  - [ ] Can not exit when using with `yes` command, pressing ctrl + c in terminal kill all applications 
