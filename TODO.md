@@ -8,11 +8,11 @@ Note that this to-do list may not cover all cases.
 - [x] Restore a session (-r/--restore)
 - [x] Close a session (-c/--close-all)
   - [x] Close selected apps (Split --close-all to --close [all|select]?)
-- [ ] Add -x/--exclude option:
+- [x] Add -x/--exclude option:
   - [ ] Support saving a session
   - [x] Support restoring a session
   - [x] Support closing a session
-- [ ] Add -i/--include option
+- [x] Add -i/--include option
   - [ ] Support saving a session
   - [x] Support restoring a session
   - [x] Support closing a session
