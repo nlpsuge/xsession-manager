@@ -29,4 +29,7 @@ Note that this to-do list may not cover all cases.
 - [ ] Provide -y/--yes option to answer 'yes' to all questions
   - [ ] Can not exit when using with `yes` command, pressing ctrl + c in terminal kill all applications
 - [x] Move windows to the workspace that they belong in last time when restoring session.
+  - [ ] Create enough workspaces before moving
+    - [x] Support gnome via `gsettings`
+
    

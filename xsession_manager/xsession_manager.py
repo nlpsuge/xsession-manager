@@ -16,7 +16,7 @@ import psutil
 from session_filter import SessionFilter
 from settings.constants import Locations
 from settings.xsession_config import XSessionConfig, XSessionConfigObject
-from utils import wmctl_wrapper, subprocess_utils
+from utils import wmctl_wrapper, subprocess_utils, gsettings_wrapper
 
 
 class XSessionManager:
@@ -143,22 +143,41 @@ class XSessionManager:
                     print('Done!')
                     return
 
-                self._moving_windows_pool = Pool(processes=cpu_count())
-                for namespace_obj in x_session_config_objects:
-                    cmd: list = namespace_obj.cmd
-                    app_name: str = namespace_obj.app_name
-                    print('Restoring application:              [%s]' % app_name)
-                    if len(cmd) == 0:
-                        print('Failure to restore application: [%s] due to empty commandline [%s]' % (app_name, str(cmd)))
-                        continue
+                def restore_sessions():
+                    self._moving_windows_pool = Pool(processes=cpu_count())
+                    for namespace_obj in x_session_config_objects:
+                        cmd: list = namespace_obj.cmd
+                        app_name: str = namespace_obj.app_name
+                        print('Restoring application:              [%s]' % app_name)
+                        if len(cmd) == 0:
+                            print('Failure to restore application: [%s] due to empty commandline [%s]' % (app_name, str(cmd)))
+                            continue
 
-                    process = subprocess_utils.run_cmd(cmd)
-                    print('Success to restore application:     [%s]' % app_name)
+                        process = subprocess_utils.run_cmd(cmd)
+                        print('Success to restore application:     [%s]' % app_name)
 
-                    self._move_window_async(namespace_obj, process)
+                        self._move_window_async(namespace_obj, process)
 
-                    # Wait some time, in case of freezing the entire system
-                    sleep(restoring_interval)
+                        # Wait some time, in case of freezing the entire system
+                        sleep(restoring_interval)
+
+                # Create enough workspaces
+                if wmctl_wrapper.is_gnome():
+                    # TODO No need to use int() because the type of 'desktop_number' should be int, something is wrong
+                    max_desktop_number = int(max([x_session_config_object.desktop_number
+                                                 for x_session_config_object in x_session_config_objects])) + 1
+                    if gsettings_wrapper.is_dynamic_workspaces():
+                        gsettings_wrapper.disable_dynamic_workspaces()
+                        gsettings_wrapper.set_workspaces_number(max_desktop_number)
+                        restore_sessions()
+                        gsettings_wrapper.enable_dynamic_workspaces()
+                    else:
+                        workspaces_number = gsettings_wrapper.get_workspaces_number()
+                        if max_desktop_number > workspaces_number:
+                            gsettings_wrapper.set_workspaces_number(max_desktop_number)
+                        restore_sessions()
+                else:
+                    restore_sessions()
                 print('Done!')
 
     def close_windows(self):
