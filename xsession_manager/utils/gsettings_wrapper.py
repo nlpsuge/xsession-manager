@@ -18,7 +18,7 @@ def enable_dynamic_workspaces():
 def set_workspaces_number(workspaces_number: int):
     """
     Must set dynamic-workspaces to false before setting the new value of num-workspaces,
-    or the change will not taken effect.
+    or the change will not take effect.
 
     :param workspaces_number: the total number of workspaces
     """
