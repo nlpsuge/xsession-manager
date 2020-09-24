@@ -168,8 +168,12 @@ class XSessionManager:
                                                  for x_session_config_object in x_session_config_objects])) + 1
                     if gsettings_wrapper.is_dynamic_workspaces():
                         gsettings_wrapper.disable_dynamic_workspaces()
-                        gsettings_wrapper.set_workspaces_number(max_desktop_number)
-                        restore_sessions()
+                        try:
+                            gsettings_wrapper.set_workspaces_number(max_desktop_number)
+                            restore_sessions()
+                        except Exception as e:
+                            import traceback
+                            print(traceback.format_exc())
                         gsettings_wrapper.enable_dynamic_workspaces()
                     else:
                         workspaces_number = gsettings_wrapper.get_workspaces_number()
@@ -211,7 +215,6 @@ class XSessionManager:
 
     def __getstate__(self):
         self_dict = self.__dict__.copy()
-        print(self_dict)
         del self_dict['_moving_windows_pool']
         return self_dict
 
@@ -241,6 +244,8 @@ class XSessionManager:
                         wmctl_wrapper.move_window_to(running_window_id, desktop_number)
                         moving = False
                     else:
+                        # Wait some time to prevent 'X Error of failed request:  BadWindow (invalid Window parameter)'
+                        sleep(0.5)
                         running_windows = wmctl_wrapper.get_running_windows()
         except Exception as e:
             import traceback
