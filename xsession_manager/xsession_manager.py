@@ -16,7 +16,7 @@ import psutil
 from session_filter import SessionFilter
 from settings.constants import Locations
 from settings.xsession_config import XSessionConfig, XSessionConfigObject
-from utils import wmctl_wrapper, subprocess_utils, gsettings_wrapper
+from utils import wmctl_wrapper, subprocess_utils, gsettings_wrapper, retry
 
 
 class XSessionManager:
@@ -154,7 +154,7 @@ class XSessionManager:
                             continue
 
                         process = subprocess_utils.run_cmd(cmd)
-                        print('Success to restore application:     [%s]' % app_name)
+                        # print('Success to restore application:     [%s]' % app_name)
 
                         self._move_window_async(namespace_obj, process)
 
@@ -222,31 +222,44 @@ class XSessionManager:
         self.__dict__.update(state)
 
     def _move_window_async(self, namespace_obj: XSessionConfigObject, process: subprocess.Popen):
-        self._moving_windows_pool.apply_async(self._move_window, (namespace_obj, process.pid))
+        pid = process.pid
+        self._moving_windows_pool.apply_async(
+            retry.Retry(6, 1).do_retry(self._move_window, (namespace_obj, pid)))
 
     def _move_window(self, namespace_obj: XSessionConfigObject, pid: int):
         try:
+            pids = [str(c.pid) for c in psutil.Process(pid).children()]
             pid_str = str(pid)
+            pids.append(pid_str)
             desktop_number = namespace_obj.desktop_number
-
             running_windows = wmctl_wrapper.get_running_windows()
-            moving = True
-            while moving:
-                for running_window in running_windows:
-                    running_window_id = running_window[0]
-                    running_window_desktop_number = running_window[1]
-                    running_window_pid = running_window[2]
-                    # if cmd_line == running_window.cmd and running_window.desktop_number != desktop_number:
-                    if running_window_pid == pid_str and running_window_desktop_number != desktop_number:
-                        process = psutil.Process(pid)
-                        print('Moving window [%s %s %s] to desktop [%s]' %
-                              (running_window_id, pid_str, process.name(), desktop_number))
-                        wmctl_wrapper.move_window_to(running_window_id, desktop_number)
-                        moving = False
-                    else:
-                        # Wait some time to prevent 'X Error of failed request:  BadWindow (invalid Window parameter)'
-                        sleep(0.5)
-                        running_windows = wmctl_wrapper.get_running_windows()
+            moving_windows = [running_window for running_window in running_windows
+                              if running_window[2] in pids and running_window[1] != desktop_number]
+
+            # Get process info according to command line
+            if len(moving_windows) == 0:
+                cmd = namespace_obj.cmd
+                pids = []
+                for p in psutil.process_iter(attrs=['pid', 'cmdline']):
+                    if p.cmdline() == cmd:
+                        pids.append(str(p.pid))
+                        break
+                running_windows = wmctl_wrapper.get_running_windows()
+                moving_windows = [running_window for running_window in running_windows
+                                  if running_window[2] in pids and running_window[1] != desktop_number]
+
+            if len(moving_windows) == 0:
+                raise retry.NeedRetryException(namespace_obj)
+
+            for running_window in moving_windows:
+                running_window_id = running_window[0]
+                process = psutil.Process(pid)
+                print('Moving window to desktop:           [%s: %s]' % (process.name(), desktop_number))
+                wmctl_wrapper.move_window_to(running_window_id, desktop_number)
+                # Wait some time to prevent 'X Error of failed request:  BadWindow (invalid Window parameter)'
+                sleep(0.5)
+        except retry.NeedRetryException as ne:
+            raise ne
         except Exception as e:
             import traceback
             print(traceback.format_exc())
