@@ -227,14 +227,13 @@ class XSessionManager:
             retry.Retry(6, 1).do_retry(self._move_window, (namespace_obj, pid)))
 
     def _move_window(self, namespace_obj: XSessionConfigObject, pid: int):
+        no_need_to_move = True
+        moving_windows = []
         try:
             pids = [str(c.pid) for c in psutil.Process(pid).children()]
             pid_str = str(pid)
             pids.append(pid_str)
             desktop_number = namespace_obj.desktop_number
-            running_windows = wmctl_wrapper.get_running_windows()
-            moving_windows = [running_window for running_window in running_windows
-                              if running_window[2] in pids and running_window[1] != desktop_number]
 
             # Get process info according to command line
             if len(moving_windows) == 0:
@@ -244,12 +243,20 @@ class XSessionManager:
                     if p.cmdline() == cmd:
                         pids.append(str(p.pid))
                         break
-                running_windows = wmctl_wrapper.get_running_windows()
-                moving_windows = [running_window for running_window in running_windows
-                                  if running_window[2] in pids and running_window[1] != desktop_number]
+
+            running_windows = wmctl_wrapper.get_running_windows()
+            for running_window in running_windows:
+                if running_window[2] in pids:
+                    if running_window[1] != desktop_number:
+                        moving_windows.append(running_window)
+                        no_need_to_move = False
+                else:
+                    no_need_to_move = False
 
             if len(moving_windows) == 0:
                 raise retry.NeedRetryException(namespace_obj)
+            elif no_need_to_move:
+                return
 
             for running_window in moving_windows:
                 running_window_id = running_window[0]
