@@ -156,7 +156,7 @@ class XSessionManager:
                         process = subprocess_utils.run_cmd(cmd)
                         # print('Success to restore application:     [%s]' % app_name)
 
-                        self._move_window_async(namespace_obj, process)
+                        self._move_window_async(namespace_obj, process.pid)
 
                         # Wait some time, in case of freezing the entire system
                         sleep(restoring_interval)
@@ -213,6 +213,26 @@ class XSessionManager:
             # Wait some time, in case of freezing the entire system
             sleep(0.25)
 
+    def move_window(self, session_name):
+        session_path = Path(self.base_location_of_sessions, session_name)
+        if not session_path.exists():
+            raise FileNotFoundError('Session file [%s] was not found.' % session_path)
+
+        with open(session_path, 'r') as file:
+            namespace_objs: XSessionConfig = json.load(file, object_hook=lambda d: Namespace(**d))
+
+        x_session_config_objects: List[XSessionConfigObject] = namespace_objs.x_session_config_objects
+
+        if self.session_filters is not None:
+            for session_filter in self.session_filters:
+                if session_filter is None:
+                    continue
+                x_session_config_objects[:] = session_filter(x_session_config_objects)
+
+        self._moving_windows_pool = Pool(processes=cpu_count())
+        for namespace_obj in x_session_config_objects:
+            self._move_window(namespace_obj, need_retry=False)
+
     def __getstate__(self):
         self_dict = self.__dict__.copy()
         del self_dict['_moving_windows_pool']
@@ -221,24 +241,25 @@ class XSessionManager:
     def __setstate__(self, state):
         self.__dict__.update(state)
 
-    def _move_window_async(self, namespace_obj: XSessionConfigObject, process: subprocess.Popen):
-        pid = process.pid
+    def _move_window_async(self, namespace_obj: XSessionConfigObject, pid: int = None):
         self._moving_windows_pool.apply_async(
             retry.Retry(6, 1).do_retry(self._move_window, (namespace_obj, pid)))
 
-    def _move_window(self, namespace_obj: XSessionConfigObject, pid: int):
+    def _move_window(self, namespace_obj: XSessionConfigObject, pid: int = None, need_retry=True):
         no_need_to_move = True
         moving_windows = []
+        pids = []
         try:
-            pids = [str(c.pid) for c in psutil.Process(pid).children()]
-            pid_str = str(pid)
-            pids.append(pid_str)
             desktop_number = namespace_obj.desktop_number
+
+            if pid:
+                pids = [str(c.pid) for c in psutil.Process(pid).children()]
+                pid_str = str(pid)
+                pids.append(pid_str)
 
             # Get process info according to command line
             if len(moving_windows) == 0:
                 cmd = namespace_obj.cmd
-                pids = []
                 for p in psutil.process_iter(attrs=['pid', 'cmdline']):
                     if p.cmdline() == cmd:
                         pids.append(str(p.pid))
@@ -253,14 +274,14 @@ class XSessionManager:
                 else:
                     no_need_to_move = False
 
-            if len(moving_windows) == 0:
+            if need_retry and len(moving_windows) == 0:
                 raise retry.NeedRetryException(namespace_obj)
             elif no_need_to_move:
                 return
 
             for running_window in moving_windows:
                 running_window_id = running_window[0]
-                process = psutil.Process(pid)
+                process = psutil.Process(int(running_window[2]))
                 print('Moving window to desktop:           [%s: %s]' % (process.name(), desktop_number))
                 wmctl_wrapper.move_window_to(running_window_id, desktop_number)
                 # Wait some time to prevent 'X Error of failed request:  BadWindow (invalid Window parameter)'
