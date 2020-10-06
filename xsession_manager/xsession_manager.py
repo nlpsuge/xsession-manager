@@ -1,7 +1,7 @@
 import datetime
 import json
 import os
-import subprocess
+from contextlib import contextmanager
 from itertools import groupby
 from multiprocessing import cpu_count
 from multiprocessing.pool import Pool
@@ -161,28 +161,33 @@ class XSessionManager:
                         # Wait some time, in case of freezing the entire system
                         sleep(restoring_interval)
 
-                # Create enough workspaces
-                if wmctl_wrapper.is_gnome():
-                    # TODO No need to use int() because the type of 'desktop_number' should be int, something is wrong
-                    max_desktop_number = int(max([x_session_config_object.desktop_number
-                                                 for x_session_config_object in x_session_config_objects])) + 1
-                    if gsettings_wrapper.is_dynamic_workspaces():
-                        gsettings_wrapper.disable_dynamic_workspaces()
-                        try:
-                            gsettings_wrapper.set_workspaces_number(max_desktop_number)
-                            restore_sessions()
-                        except Exception as e:
-                            import traceback
-                            print(traceback.format_exc())
-                        gsettings_wrapper.enable_dynamic_workspaces()
-                    else:
-                        workspaces_number = gsettings_wrapper.get_workspaces_number()
-                        if max_desktop_number > workspaces_number:
-                            gsettings_wrapper.set_workspaces_number(max_desktop_number)
-                        restore_sessions()
-                else:
+                max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
+                with self.create_enough_workspaces(max_desktop_number):
                     restore_sessions()
                 print('Done!')
+
+    @contextmanager
+    def create_enough_workspaces(self, max_desktop_number: int):
+        # Create enough workspaces
+        if wmctl_wrapper.is_gnome():
+            if gsettings_wrapper.is_dynamic_workspaces():
+                gsettings_wrapper.disable_dynamic_workspaces()
+                try:
+                    gsettings_wrapper.set_workspaces_number(max_desktop_number)
+                    try:
+                        yield
+                    finally:
+                        gsettings_wrapper.enable_dynamic_workspaces()
+                except Exception as e:
+                    import traceback
+                    print(traceback.format_exc())
+            else:
+                workspaces_number = gsettings_wrapper.get_workspaces_number()
+                if max_desktop_number > workspaces_number:
+                    gsettings_wrapper.set_workspaces_number(max_desktop_number)
+                yield
+        else:
+            yield
 
     def close_windows(self):
         sessions: List[XSessionConfigObject] = \
@@ -230,8 +235,15 @@ class XSessionManager:
                 x_session_config_objects[:] = session_filter(x_session_config_objects)
 
         self._moving_windows_pool = Pool(processes=cpu_count())
-        for namespace_obj in x_session_config_objects:
-            self._move_window(namespace_obj, need_retry=False)
+        max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
+        with self.create_enough_workspaces(max_desktop_number):
+            for namespace_obj in x_session_config_objects:
+                self._move_window(namespace_obj, need_retry=False)
+
+    def _get_max_desktop_number(self, x_session_config_objects):
+        # TODO No need to use int() because the type of 'desktop_number' should be int, something is wrong
+        return int(max([x_session_config_object.desktop_number
+                        for x_session_config_object in x_session_config_objects])) + 1
 
     def __getstate__(self):
         self_dict = self.__dict__.copy()
@@ -282,7 +294,7 @@ class XSessionManager:
             for running_window in moving_windows:
                 running_window_id = running_window[0]
                 process = psutil.Process(int(running_window[2]))
-                print('Moving window to desktop:           [%s: %s]' % (process.name(), desktop_number))
+                print('Moving window to desktop:           [%s: %s]' % (running_window[8], desktop_number))
                 wmctl_wrapper.move_window_to(running_window_id, desktop_number)
                 # Wait some time to prevent 'X Error of failed request:  BadWindow (invalid Window parameter)'
                 sleep(0.5)
