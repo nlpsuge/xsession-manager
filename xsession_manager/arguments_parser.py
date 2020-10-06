@@ -47,6 +47,11 @@ class ArgumentsParser:
                                  '<window_id>, <pid>, <app_name> or <title_name>. '
                                  'Require at least one value')
 
+        parser.add_argument('-ma', '--move-automatically',
+                            nargs='?',
+                            help='Auto move windows to specified workspaces according to a saved session. '
+                                 'The default session is `xsession-default`')
+
         if len(sys.argv) == 1:
             print('No arguments provided.\n')
             parser.print_help(sys.stderr)

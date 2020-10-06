@@ -1,7 +1,10 @@
 import datetime
 import json
 import os
+from contextlib import contextmanager
 from itertools import groupby
+from multiprocessing import cpu_count
+from multiprocessing.pool import Pool
 from operator import attrgetter
 from pathlib import Path
 from time import time, sleep
@@ -13,10 +16,12 @@ import psutil
 from session_filter import SessionFilter
 from settings.constants import Locations
 from settings.xsession_config import XSessionConfig, XSessionConfigObject
-from utils import wmctl_wrapper, subprocess_utils
+from utils import wmctl_wrapper, subprocess_utils, gsettings_wrapper, retry
 
 
 class XSessionManager:
+
+    _moving_windows_pool: Pool
 
     session_filters: List[SessionFilter]
     base_location_of_sessions: str
@@ -138,21 +143,51 @@ class XSessionManager:
                     print('Done!')
                     return
 
-                for namespace_obj in x_session_config_objects:
-                    cmd: list = namespace_obj.cmd
-                    app_name: str = namespace_obj.app_name
-                    print('Restoring application:              [%s]' % app_name)
-                    if len(cmd) == 0:
-                        print('Failure to restore application: [%s] due to empty commandline [%s]' % (app_name, str(cmd)))
-                        continue
+                def restore_sessions():
+                    self._moving_windows_pool = Pool(processes=cpu_count())
+                    for namespace_obj in x_session_config_objects:
+                        cmd: list = namespace_obj.cmd
+                        app_name: str = namespace_obj.app_name
+                        print('Restoring application:              [%s]' % app_name)
+                        if len(cmd) == 0:
+                            print('Failure to restore application: [%s] due to empty commandline [%s]' % (app_name, str(cmd)))
+                            continue
 
-                    # Ignore the output for now
-                    subprocess_utils.run_cmd(cmd)
-                    print('Success to restore application:     [%s]' % app_name)
+                        process = subprocess_utils.run_cmd(cmd)
+                        # print('Success to restore application:     [%s]' % app_name)
 
-                    # Wait some time, in case of freezing the entire system
-                    sleep(restoring_interval)
+                        self._move_window_async(namespace_obj, process.pid)
+
+                        # Wait some time, in case of freezing the entire system
+                        sleep(restoring_interval)
+
+                max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
+                with self.create_enough_workspaces(max_desktop_number):
+                    restore_sessions()
                 print('Done!')
+
+    @contextmanager
+    def create_enough_workspaces(self, max_desktop_number: int):
+        # Create enough workspaces
+        if wmctl_wrapper.is_gnome():
+            if gsettings_wrapper.is_dynamic_workspaces():
+                gsettings_wrapper.disable_dynamic_workspaces()
+                try:
+                    gsettings_wrapper.set_workspaces_number(max_desktop_number)
+                    try:
+                        yield
+                    finally:
+                        gsettings_wrapper.enable_dynamic_workspaces()
+                except Exception as e:
+                    import traceback
+                    print(traceback.format_exc())
+            else:
+                workspaces_number = gsettings_wrapper.get_workspaces_number()
+                if max_desktop_number > workspaces_number:
+                    gsettings_wrapper.set_workspaces_number(max_desktop_number)
+                yield
+        else:
+            yield
 
     def close_windows(self):
         sessions: List[XSessionConfigObject] = \
@@ -183,3 +218,94 @@ class XSessionManager:
             # Wait some time, in case of freezing the entire system
             sleep(0.25)
 
+    def move_window(self, session_name):
+        session_path = Path(self.base_location_of_sessions, session_name)
+        if not session_path.exists():
+            raise FileNotFoundError('Session file [%s] was not found.' % session_path)
+
+        with open(session_path, 'r') as file:
+            namespace_objs: XSessionConfig = json.load(file, object_hook=lambda d: Namespace(**d))
+
+        x_session_config_objects: List[XSessionConfigObject] = namespace_objs.x_session_config_objects
+
+        if self.session_filters is not None:
+            for session_filter in self.session_filters:
+                if session_filter is None:
+                    continue
+                x_session_config_objects[:] = session_filter(x_session_config_objects)
+
+        self._moving_windows_pool = Pool(processes=cpu_count())
+        max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
+        with self.create_enough_workspaces(max_desktop_number):
+            for namespace_obj in x_session_config_objects:
+                self._move_window(namespace_obj, need_retry=False)
+
+    def _get_max_desktop_number(self, x_session_config_objects):
+        # TODO No need to use int() because the type of 'desktop_number' should be int, something is wrong
+        return int(max([x_session_config_object.desktop_number
+                        for x_session_config_object in x_session_config_objects])) + 1
+
+    def __getstate__(self):
+        self_dict = self.__dict__.copy()
+        del self_dict['_moving_windows_pool']
+        return self_dict
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+
+    def _move_window_async(self, namespace_obj: XSessionConfigObject, pid: int = None):
+        self._moving_windows_pool.apply_async(
+            retry.Retry(6, 1).do_retry(self._move_window, (namespace_obj, pid)))
+
+    def _move_window(self, namespace_obj: XSessionConfigObject, pid: int = None, need_retry=True):
+        no_need_to_move = True
+        moving_windows = []
+        pids = []
+        try:
+            desktop_number = namespace_obj.desktop_number
+
+            if pid:
+                pids = [str(c.pid) for c in psutil.Process(pid).children()]
+                pid_str = str(pid)
+                pids.append(pid_str)
+
+            # Get process info according to command line
+            if len(moving_windows) == 0:
+                cmd = namespace_obj.cmd
+                if len(cmd) <= 0:
+                    return
+
+                for p in psutil.process_iter(attrs=['pid', 'cmdline']):
+                    if len(p.cmdline()) <= 0:
+                        continue
+
+                    if p.cmdline() == cmd:
+                        pids.append(str(p.pid))
+                        break
+
+            running_windows = wmctl_wrapper.get_running_windows()
+            for running_window in running_windows:
+                if running_window[2] in pids:
+                    if running_window[1] != desktop_number:
+                        moving_windows.append(running_window)
+                        no_need_to_move = False
+                else:
+                    no_need_to_move = False
+
+            if need_retry and len(moving_windows) == 0:
+                raise retry.NeedRetryException(namespace_obj)
+            elif no_need_to_move:
+                return
+
+            for running_window in moving_windows:
+                running_window_id = running_window[0]
+                process = psutil.Process(int(running_window[2]))
+                print('Moving window to desktop:           [%s : %s]' % (running_window[8], desktop_number))
+                wmctl_wrapper.move_window_to(running_window_id, desktop_number)
+                # Wait some time to prevent 'X Error of failed request:  BadWindow (invalid Window parameter)'
+                sleep(0.5)
+        except retry.NeedRetryException as ne:
+            raise ne
+        except Exception as e:
+            import traceback
+            print(traceback.format_exc())

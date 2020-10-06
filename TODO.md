@@ -28,5 +28,10 @@ Note that this to-do list may not cover all cases.
 - [ ] Using a log framework instead of print
 - [ ] Provide -y/--yes option to answer 'yes' to all questions
   - [ ] Can not exit when using with `yes` command, pressing ctrl + c in terminal kill all applications
-- [ ] Move windows to the workspace that they belong in last time when restoring session.
+- [x] Move windows to the workspace that they belong in last time 
+  - [x] When restoring session.
+  - [x] By using '-ma/--move-automatically'
+  - [ ] Create enough workspaces before moving
+    - [x] Support gnome via `gsettings`
+
    

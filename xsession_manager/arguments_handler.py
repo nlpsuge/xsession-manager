@@ -23,6 +23,7 @@ def check_and_reset_args(args: Namespace):
     detail = args.detail
     close_all = args.close_all
     pop_up_a_dialog_to_restore = args.pr
+    move_automatically = args.move_automatically
 
     # Need to deal with this kind of case when user type -s' '
     argv = [a.strip() for a in sys.argv[1:]]
@@ -39,6 +40,10 @@ def check_and_reset_args(args: Namespace):
             and ('-pr' in argv):
         args.pr = Locations.DEFAULT_SESSION_NAME
         pop_up_a_dialog_to_restore = args.pr
+    if string_utils.empty_string(move_automatically) \
+            and ('-ma' in argv or '--move-automatically' in argv):
+        args.move_automatically = Locations.DEFAULT_SESSION_NAME
+        move_automatically = args.move_automatically
 
     print('Namespace object after handling by this program: ' + str(args))
 
@@ -51,6 +56,9 @@ def check_and_reset_args(args: Namespace):
                                              'not allowed with any argument of -s/--save, -r/--restore, -c/--close-all')
         if pop_up_a_dialog_to_restore:
             raise argparse.ArgumentTypeError('argument -pr : '
+                                             'not allowed with any argument of -s/--save, -r/--restore, -c/--close-all')
+        if move_automatically:
+            raise argparse.ArgumentTypeError('argument -ma/--move-automatically : '
                                              'not allowed with any argument of -s/--save, -r/--restore, -c/--close-all')
 
     if close_all is None \
@@ -92,19 +100,13 @@ def handle_arguments(args: Namespace):
     restoring_interval: int = args.restoring_interval
     exclude: list = args.exclude
     include: list = args.include
+    move_automatically = args.move_automatically
 
     if session_name_for_saving:
         print(constants.Prompts.MSG_SAVE)
         wait_for_answer()
         xsm = XSessionManager()
         xsm.save_session(session_name_for_saving)
-
-    if session_name_for_restoring:
-        print(constants.Prompts.MSG_RESTORE % session_name_for_restoring)
-        wait_for_answer()
-        xsm = XSessionManager([IncludeSessionFilter(include),
-                               ExcludeSessionFilter(exclude)])
-        xsm.restore_session(session_name_for_restoring, restoring_interval)
 
     if close_all is not None:
         print(constants.Prompts.MSG_CLOSE_ALL_WINDOWS)
@@ -115,6 +117,13 @@ def handle_arguments(args: Namespace):
                                ExcludeSessionFilter(exclude)])
         xsm.close_windows()
         print('Done!')
+
+    if session_name_for_restoring:
+        print(constants.Prompts.MSG_RESTORE % session_name_for_restoring)
+        wait_for_answer()
+        xsm = XSessionManager([IncludeSessionFilter(include),
+                               ExcludeSessionFilter(exclude)])
+        xsm.restore_session(session_name_for_restoring, restoring_interval)
 
     if pop_up_a_dialog_to_restore:
         answer = create_askyesno_dialog(constants.Prompts.MSG_POP_UP_A_DIALOG_TO_RESTORE
@@ -176,7 +185,10 @@ def handle_arguments(args: Namespace):
                             print('  %s: %s' % (ordered_key.replace('_', ' '), value))
                 print()
 
-
+    if move_automatically:
+        xsm = XSessionManager([IncludeSessionFilter(include),
+                               ExcludeSessionFilter(exclude)])
+        xsm.move_window(move_automatically)
 
 
 
