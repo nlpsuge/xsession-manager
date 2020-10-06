@@ -272,7 +272,13 @@ class XSessionManager:
             # Get process info according to command line
             if len(moving_windows) == 0:
                 cmd = namespace_obj.cmd
+                if len(cmd) <= 0:
+                    return
+
                 for p in psutil.process_iter(attrs=['pid', 'cmdline']):
+                    if len(p.cmdline()) <= 0:
+                        continue
+
                     if p.cmdline() == cmd:
                         pids.append(str(p.pid))
                         break
@@ -294,7 +300,7 @@ class XSessionManager:
             for running_window in moving_windows:
                 running_window_id = running_window[0]
                 process = psutil.Process(int(running_window[2]))
-                print('Moving window to desktop:           [%s: %s]' % (running_window[8], desktop_number))
+                print('Moving window to desktop:           [%s : %s]' % (running_window[8], desktop_number))
                 wmctl_wrapper.move_window_to(running_window_id, desktop_number)
                 # Wait some time to prevent 'X Error of failed request:  BadWindow (invalid Window parameter)'
                 sleep(0.5)
