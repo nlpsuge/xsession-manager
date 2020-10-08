@@ -16,7 +16,7 @@ import psutil
 from session_filter import SessionFilter
 from settings.constants import Locations
 from settings.xsession_config import XSessionConfig, XSessionConfigObject
-from utils import wmctl_wrapper, subprocess_utils, gsettings_wrapper, retry
+from utils import wmctl_wrapper, subprocess_utils, retry, gio_utils
 
 
 class XSessionManager:
@@ -170,21 +170,22 @@ class XSessionManager:
     def create_enough_workspaces(self, max_desktop_number: int):
         # Create enough workspaces
         if wmctl_wrapper.is_gnome():
-            if gsettings_wrapper.is_dynamic_workspaces():
-                gsettings_wrapper.disable_dynamic_workspaces()
+            gsettings = gio_utils.GSettings(access_dynamic_workspaces=True, access_num_workspaces=True)
+            if gsettings.is_dynamic_workspaces():
+                gsettings.disable_dynamic_workspaces()
                 try:
-                    gsettings_wrapper.set_workspaces_number(max_desktop_number)
+                    gsettings.set_workspaces_number(max_desktop_number)
                     try:
                         yield
                     finally:
-                        gsettings_wrapper.enable_dynamic_workspaces()
+                        gsettings.enable_dynamic_workspaces()
                 except Exception as e:
                     import traceback
                     print(traceback.format_exc())
             else:
-                workspaces_number = gsettings_wrapper.get_workspaces_number()
+                workspaces_number = gsettings.get_workspaces_number()
                 if max_desktop_number > workspaces_number:
-                    gsettings_wrapper.set_workspaces_number(max_desktop_number)
+                    gsettings.set_workspaces_number(max_desktop_number)
                 yield
         else:
             yield
