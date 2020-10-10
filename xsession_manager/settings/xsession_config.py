@@ -19,7 +19,8 @@ class XSessionConfigObject(Base):
         width: int
         height: int
 
-    window_id: str
+    window_id: str  # hexadecimal
+    window_id_the_int_type: int
     desktop_number: int
     pid: int
     window_position: WindowPosition
@@ -35,7 +36,10 @@ class XSessionConfigObject(Base):
         session_details = []
         for window in windows_list:
             config = XSessionConfigObject()
+            # Use hex type window id if closing via wmctl
             config.window_id = window[0]
+            # Use int type window id if closing via Wnck
+            config.window_id_the_int_type = int(window[0], 16)
             config.desktop_number = window[1]
             config.pid = int(window[2])
             window_position = config.WindowPosition()
