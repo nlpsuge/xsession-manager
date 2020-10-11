@@ -1,3 +1,4 @@
+# Note: Wnck may not works in Wayland
 
 from time import time
 
