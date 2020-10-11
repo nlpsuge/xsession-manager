@@ -1,3 +1,4 @@
+from enum import Enum
 from os.path import expanduser
 from pathlib import Path
 
@@ -20,5 +21,15 @@ class Locations:
 
     # Save the current x session to xsession-default
     LOCATION_OF_DEFAULT_SESSION = Path(BASE_LOCATION_OF_SESSIONS, 'xsession-default')
+
+
+class GSettings(Enum):
+
+    dynamic_workspaces = 'org.gnome.mutter', 'dynamic-workspaces'
+    workspaces_number = 'org.gnome.desktop.wm.preferences', 'num-workspaces'
+
+    def __init__(self, schema: str, key: str):
+        self.schema = schema
+        self.key = key
 
 

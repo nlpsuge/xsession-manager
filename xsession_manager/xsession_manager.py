@@ -16,7 +16,7 @@ import psutil
 from session_filter import SessionFilter
 from settings.constants import Locations
 from settings.xsession_config import XSessionConfig, XSessionConfigObject
-from utils import wmctl_wrapper, subprocess_utils, gsettings_wrapper, retry
+from utils import wmctl_wrapper, subprocess_utils, retry, gio_utils, wnck_utils
 
 
 class XSessionManager:
@@ -169,22 +169,28 @@ class XSessionManager:
     @contextmanager
     def create_enough_workspaces(self, max_desktop_number: int):
         # Create enough workspaces
-        if wmctl_wrapper.is_gnome():
-            if gsettings_wrapper.is_dynamic_workspaces():
-                gsettings_wrapper.disable_dynamic_workspaces()
+        if wnck_utils.is_gnome():
+            workspace_count = wnck_utils.get_workspace_count()
+            if workspace_count >= max_desktop_number:
+                yield
+                return
+
+            gsettings = gio_utils.GSettings(access_dynamic_workspaces=True, access_num_workspaces=True)
+            if gsettings.is_dynamic_workspaces():
+                gsettings.disable_dynamic_workspaces()
                 try:
-                    gsettings_wrapper.set_workspaces_number(max_desktop_number)
+                    gsettings.set_workspaces_number(max_desktop_number)
                     try:
                         yield
                     finally:
-                        gsettings_wrapper.enable_dynamic_workspaces()
+                        gsettings.enable_dynamic_workspaces()
                 except Exception as e:
                     import traceback
                     print(traceback.format_exc())
             else:
-                workspaces_number = gsettings_wrapper.get_workspaces_number()
+                workspaces_number = gsettings.get_workspaces_number()
                 if max_desktop_number > workspaces_number:
-                    gsettings_wrapper.set_workspaces_number(max_desktop_number)
+                    gsettings.set_workspaces_number(max_desktop_number)
                 yield
         else:
             yield
@@ -200,7 +206,7 @@ class XSessionManager:
 
         sessions.sort(key=attrgetter('pid'))
         for pid, group_by_pid in groupby(sessions, key=attrgetter('pid')):
-            a_process_with_many_windows = list(group_by_pid)
+            a_process_with_many_windows: List[XSessionConfigObject] = list(group_by_pid)
             if len(a_process_with_many_windows) > 1:
                 a_process_with_many_windows.sort(key=attrgetter('window_id'), reverse=True)
                 # Close one application's windows one by one from the last one
@@ -209,11 +215,11 @@ class XSessionManager:
                     # No need to catch the CalledProcessError for now, I think.
                     # In one case, if failed to close one window via 'wmctrl -ic window_id', the '$?' will be 0.
                     # In this case, this application may not be closed successfully.
-                    wmctl_wrapper.close_window_gracefully_sync(session.window_id)
+                    wnck_utils.close_window_gracefully_async(session.window_id_the_int_type)
             else:
                 session = a_process_with_many_windows[0]
                 print('Closing %s(%s %s).' % (session.app_name, session.window_id, session.pid))
-                wmctl_wrapper.close_window_gracefully_async(session.window_id)
+                wnck_utils.close_window_gracefully_async(session.window_id_the_int_type)
 
             # Wait some time, in case of freezing the entire system
             sleep(0.25)
