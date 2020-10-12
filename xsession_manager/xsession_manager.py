@@ -279,9 +279,8 @@ class XSessionManager:
 
             pids = []
             if pid:
-                pids = [str(c.pid) for c in psutil.Process(pid).children()]
-                pid_str = str(pid)
-                pids.append(pid_str)
+                pids = [c.pid for c in psutil.Process(pid).children()]
+                pids.append(pid)
 
             # Get process info according to command line
             if len(pids) == 0:
