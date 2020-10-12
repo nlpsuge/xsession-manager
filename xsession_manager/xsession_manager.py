@@ -34,8 +34,11 @@ class XSessionManager:
         self.base_location_of_sessions = base_location_of_sessions
         self.base_location_of_backup_sessions = base_location_of_backup_sessions
 
+        self._moved_windowids_cache = []
+
     def save_session(self, session_name: str, session_filter: SessionFilter=None):
-        x_session_config = self.get_session_details(session_filters=[session_filter])
+        x_session_config = self.get_session_details(remove_duplicates_by_pid=False,
+                                                    session_filters=[session_filter])
         x_session_config.session_name = session_name
 
         session_path = Path(self.base_location_of_sessions, session_name)
@@ -128,10 +131,16 @@ class XSessionManager:
             # Note: os.fork() does not support the Windows
             pid = os.fork()
             # Run command lines in the child process
-            # TODO: I'm not sure if this method works well and is the best practice
+            # TODO 1. I'm not sure if this method works well and is the best practice
+            # TODO 2. Must run in the child process or receive this error:
+            # Gdk-Message: 23:23:24.613: main.py: Fatal IO error 11 (Resource temporarily unavailable) on X server :1
+            # Not know the root cause
             if pid == 0:
                 x_session_config_objects: List[XSessionConfigObject] = namespace_objs.x_session_config_objects
-
+                # Remove duplicates according to pid
+                session_details_dict = {x_session_config.pid: x_session_config
+                                        for x_session_config in x_session_config_objects}
+                x_session_config_objects = list(session_details_dict.values())
                 if self.session_filters is not None:
                     for session_filter in self.session_filters:
                         if session_filter is None:
@@ -233,6 +242,7 @@ class XSessionManager:
             namespace_objs: XSessionConfig = json.load(file, object_hook=lambda d: Namespace(**d))
 
         x_session_config_objects: List[XSessionConfigObject] = namespace_objs.x_session_config_objects
+        x_session_config_objects.sort(key=attrgetter('desktop_number'))
 
         if self.session_filters is not None:
             for session_filter in self.session_filters:
@@ -264,19 +274,16 @@ class XSessionManager:
             retry.Retry(6, 1).do_retry(self._move_window, (namespace_obj, pid)))
 
     def _move_window(self, namespace_obj: XSessionConfigObject, pid: int = None, need_retry=True):
-        no_need_to_move = True
-        moving_windows = []
-        pids = []
         try:
             desktop_number = namespace_obj.desktop_number
 
+            pids = []
             if pid:
-                pids = [str(c.pid) for c in psutil.Process(pid).children()]
-                pid_str = str(pid)
-                pids.append(pid_str)
+                pids = [c.pid for c in psutil.Process(pid).children()]
+                pids.append(pid)
 
             # Get process info according to command line
-            if len(moving_windows) == 0:
+            if len(pids) == 0:
                 cmd = namespace_obj.cmd
                 if len(cmd) <= 0:
                     return
@@ -286,15 +293,22 @@ class XSessionManager:
                         continue
 
                     if p.cmdline() == cmd:
-                        pids.append(str(p.pid))
+                        pids.append(p.pid)
                         break
 
+            no_need_to_move = True
+            moving_windows = []
             running_windows = wmctl_wrapper.get_running_windows()
-            for running_window in running_windows:
-                if running_window[2] in pids:
-                    if running_window[1] != desktop_number:
+            x_session_config: XSessionConfig = XSessionConfigObject.convert_wmctl_result_2_list(running_windows, False)
+            x_session_config_objects: List[XSessionConfigObject] = x_session_config.x_session_config_objects
+            x_session_config_objects.sort(key=attrgetter('desktop_number'))
+            for running_window in x_session_config_objects:
+                if running_window.pid in pids:
+                    if running_window.window_title == namespace_obj.window_title \
+                            and running_window.desktop_number != desktop_number:
                         moving_windows.append(running_window)
                         no_need_to_move = False
+                        # break
                 else:
                     no_need_to_move = False
 
@@ -304,12 +318,14 @@ class XSessionManager:
                 return
 
             for running_window in moving_windows:
-                running_window_id = running_window[0]
-                process = psutil.Process(int(running_window[2]))
-                print('Moving window to desktop:           [%s : %s]' % (running_window[8], desktop_number))
+                running_window_id = running_window.window_id
+                if running_window_id in self._moved_windowids_cache:
+                    continue
+                print('Moving window to desktop:           [%s : %s]' % (running_window.window_title, desktop_number))
                 wmctl_wrapper.move_window_to(running_window_id, desktop_number)
+                self._moved_windowids_cache.append(running_window_id)
                 # Wait some time to prevent 'X Error of failed request:  BadWindow (invalid Window parameter)'
-                sleep(0.5)
+                sleep(0.25)
         except retry.NeedRetryException as ne:
             raise ne
         except Exception as e:

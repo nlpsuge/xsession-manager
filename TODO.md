@@ -33,5 +33,5 @@ Note that this to-do list may not cover all cases.
   - [x] By using '-ma/--move-automatically'
   - [ ] Create enough workspaces before moving
     - [x] Support gnome via `gsettings`
-
-   
+- [ ] Update requirements.txt
+  - [ ] python3-gobject is missing? 
