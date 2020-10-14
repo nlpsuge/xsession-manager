@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+import traceback
 from contextlib import contextmanager
 from itertools import groupby
 from multiprocessing import cpu_count
@@ -155,20 +156,25 @@ class XSessionManager:
                 def restore_sessions():
                     self._moving_windows_pool = Pool(processes=cpu_count())
                     for namespace_obj in x_session_config_objects:
-                        cmd: list = namespace_obj.cmd
-                        app_name: str = namespace_obj.app_name
-                        print('Restoring application:              [%s]' % app_name)
-                        if len(cmd) == 0:
-                            print('Failure to restore application: [%s] due to empty commandline [%s]' % (app_name, str(cmd)))
-                            continue
+                        try:
+                            cmd: list = namespace_obj.cmd
+                            app_name: str = namespace_obj.app_name
+                            print('Restoring application:              [%s]' % app_name)
+                            if len(cmd) == 0:
+                                print('Failure to restore the application named %s due to empty commandline [%s]'
+                                      % (app_name, str(cmd)))
+                                continue
 
-                        process = subprocess_utils.run_cmd(cmd)
-                        # print('Success to restore application:     [%s]' % app_name)
+                            process = subprocess_utils.run_cmd(cmd)
+                            # print('Success to restore application:     [%s]' % app_name)
 
-                        self._move_window_async(namespace_obj, process.pid)
+                            self._move_window_async(namespace_obj, process.pid)
 
-                        # Wait some time, in case of freezing the entire system
-                        sleep(restoring_interval)
+                            # Wait some time, in case of freezing the entire system
+                            sleep(restoring_interval)
+                        except Exception as e:
+                            print(traceback.format_exc())
+                            print('Failure to restore the application named %s due to the previous error' % app_name)
 
                 max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
                 with self.create_enough_workspaces(max_desktop_number):
