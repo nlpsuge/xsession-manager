@@ -1,6 +1,8 @@
+import copy
 import datetime
 import json
 import os
+import threading
 import traceback
 from contextlib import contextmanager
 from itertools import groupby
@@ -153,12 +155,16 @@ class XSessionManager:
                     print('Done!')
                     return
 
-                def restore_sessions():
-                    self._moving_windows_pool = Pool(processes=cpu_count())
-                    for namespace_obj in x_session_config_objects:
+                def restore_sessions_async(_x_session_config_objects_copy: List[XSessionConfigObject]):
+                    t = threading.Thread(target=restore_sessions, args=(_x_session_config_objects_copy,))
+                    t.start()
+                    return t
+
+                def restore_sessions(_x_session_config_objects_copy: List[XSessionConfigObject]):
+                    for namespace_obj in _x_session_config_objects_copy:
+                        cmd: list = namespace_obj.cmd
+                        app_name: str = namespace_obj.app_name
                         try:
-                            cmd: list = namespace_obj.cmd
-                            app_name: str = namespace_obj.app_name
                             print('Restoring application:              [%s]' % app_name)
                             if len(cmd) == 0:
                                 print('Failure to restore the application named %s due to empty commandline [%s]'
@@ -166,9 +172,8 @@ class XSessionManager:
                                 continue
 
                             process = subprocess_utils.run_cmd(cmd)
+                            namespace_obj.pid = process.pid
                             # print('Success to restore application:     [%s]' % app_name)
-
-                            self._move_window_async(namespace_obj, process.pid)
 
                             # Wait some time, in case of freezing the entire system
                             sleep(restoring_interval)
@@ -178,7 +183,10 @@ class XSessionManager:
 
                 max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
                 with self.create_enough_workspaces(max_desktop_number):
-                    restore_sessions()
+                    restore_thread = restore_sessions_async(copy.deepcopy(x_session_config_objects))
+                    move_thread = self.set_position_and_move_async(copy.deepcopy(x_session_config_objects))
+                    restore_thread.join()
+                    move_thread.join()
                 print('Done!')
 
     @contextmanager
@@ -264,8 +272,8 @@ class XSessionManager:
 
     def _get_max_desktop_number(self, x_session_config_objects):
         # TODO No need to use int() because the type of 'desktop_number' should be int, something is wrong
-        return int(max([x_session_config_object.desktop_number
-                        for x_session_config_object in x_session_config_objects])) + 1
+        return max([int(x_session_config_object.desktop_number)
+                        for x_session_config_object in x_session_config_objects]) + 1
 
     def __getstate__(self):
         self_dict = self.__dict__.copy()
@@ -311,7 +319,7 @@ class XSessionManager:
             for running_window in x_session_config_objects:
                 if running_window.pid in pids:
                     if running_window.window_title == namespace_obj.window_title \
-                            and running_window.desktop_number != desktop_number:
+                            and running_window.desktop_number != int(desktop_number):
                         moving_windows.append(running_window)
                         no_need_to_move = False
                         # break
@@ -331,9 +339,81 @@ class XSessionManager:
                 wmctl_wrapper.move_window_to(running_window_id, desktop_number)
                 self._moved_windowids_cache.append(running_window_id)
                 # Wait some time to prevent 'X Error of failed request:  BadWindow (invalid Window parameter)'
-                sleep(0.25)
+                # sleep(0.25)
         except retry.NeedRetryException as ne:
             raise ne
         except Exception as e:
             import traceback
             print(traceback.format_exc())
+
+    def set_position_and_move(self, x_session_config_objects: List[XSessionConfigObject]):
+
+        handled_x_session_config_object_index = []
+
+        import gi
+        gi.require_version('Wnck', '3.0')
+        gi.require_version('Gtk', '3.0')
+        from gi.repository import Wnck
+        from gi.repository import Gtk
+
+        screen: Wnck.Screen = Wnck.Screen.get_default()
+        screen.force_update()
+
+        def do_window_opened(this_screen: Wnck.Screen, opened_window: Wnck.Window):
+            app: Wnck.Application = opened_window.get_application()
+            app_name = app.get_name()
+            opened_window_title_name = opened_window.get_name()
+            print('Handle window named "%s" for app named "%s"' % (opened_window_title_name, app_name))
+
+            window_id = opened_window.get_xid()
+            opened_window_pid = opened_window.get_pid()
+            opened_window_pids = [c.pid for c in psutil.Process(opened_window_pid).children()]
+            opened_window_pids.append(opened_window_pid)
+
+            for index, x_session_config_object in enumerate(x_session_config_objects):
+                desktop_number = int(x_session_config_object.desktop_number)
+                if desktop_number == -1:
+                    continue
+
+                if opened_window_pid in opened_window_pids and\
+                        x_session_config_object.window_title == opened_window_title_name:
+
+                    # Move the window to a workspace
+                    # self._move_window(x_session_config_object, x_session_config_object.pid, need_retry=False)
+                    print('Moving window to desktop:           [%s : %d]'
+                          % (opened_window_title_name, desktop_number))
+                    wnck_utils.move_window_to(window_id, desktop_number)
+
+                    # Set position
+                    geometry_mask: Wnck.WindowMoveResizeMask = (
+                            Wnck.WindowMoveResizeMask.X |
+                            Wnck.WindowMoveResizeMask.Y |
+                            Wnck.WindowMoveResizeMask.WIDTH |
+                            Wnck.WindowMoveResizeMask.HEIGHT)
+
+                    opened_window.set_geometry(Wnck.WindowGravity.CURRENT,
+                                               geometry_mask,
+                                               int(x_session_config_object.window_position.x_offset),
+                                               int(x_session_config_object.window_position.y_offset),
+                                               int(x_session_config_object.window_position.width),
+                                               int(x_session_config_object.window_position.height))
+
+                    handled_x_session_config_object_index.append(index)
+                    # break
+
+            if len(handled_x_session_config_object_index) > 0:
+                x_session_config_objects[:] = [e for index, e in enumerate(x_session_config_objects)
+                                               if index not in handled_x_session_config_object_index]
+
+            if len(x_session_config_objects) <= 0:
+                print('Done! Leaving Gtk main loop.')
+                Gtk.main_quit()
+
+        screen.connect('window-opened', do_window_opened)
+        Gtk.main()
+
+    def set_position_and_move_async(self, x_session_config_objects_copy):
+        t = threading.Thread(target=self.set_position_and_move, args=(x_session_config_objects_copy,))
+        t.start()
+        return t
+

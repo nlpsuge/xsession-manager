@@ -17,7 +17,7 @@ def close_window_gracefully_async(window_id):
 
 def move_window_to(window_id, desktop_number):
     screen: Wnck.Screen = Wnck.Screen.get_default()
-    screen.force_update()
+    # screen.force_update()
     ws = screen.get_workspace(desktop_number)
     if ws is None:
         print('Workspace(%d) not found!' % desktop_number)
