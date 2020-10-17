@@ -161,7 +161,8 @@ class XSessionManager:
                     return t
 
                 def restore_sessions(_x_session_config_objects_copy: List[XSessionConfigObject]):
-                    for namespace_obj in _x_session_config_objects_copy:
+                    failed_restores = []
+                    for index, namespace_obj in enumerate(_x_session_config_objects_copy):
                         cmd: list = namespace_obj.cmd
                         app_name: str = namespace_obj.app_name
                         try:
@@ -178,15 +179,18 @@ class XSessionManager:
                             # Wait some time, in case of freezing the entire system
                             sleep(restoring_interval)
                         except Exception as e:
+                            failed_restores.append(index)
                             print(traceback.format_exc())
                             print('Failure to restore the application named %s due to the previous error' % app_name)
 
-                max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
-                with self.create_enough_workspaces(max_desktop_number):
-                    restore_thread = restore_sessions_async(copy.deepcopy(x_session_config_objects))
-                    move_thread = self.set_position_and_move_async(copy.deepcopy(x_session_config_objects))
-                    restore_thread.join()
-                    move_thread.join()
+                    _x_session_config_objects_copy[:] = [o for index, o in enumerate(_x_session_config_objects_copy)
+                                                         if index in failed_restores]
+
+                x_session_config_objects_copy = copy.deepcopy(x_session_config_objects)
+                restore_thread = restore_sessions_async(x_session_config_objects_copy)
+                move_thread = self.set_position_and_move_async(x_session_config_objects_copy)
+                restore_thread.join()
+                move_thread.join()
                 print('Done!')
 
     @contextmanager
@@ -235,9 +239,6 @@ class XSessionManager:
                 # Close one application's windows one by one from the last one
                 for session in a_process_with_many_windows:
                     print('Closing %s(%s %s).' % (session.app_name, session.window_id, session.pid))
-                    # No need to catch the CalledProcessError for now, I think.
-                    # In one case, if failed to close one window via 'wmctrl -ic window_id', the '$?' will be 0.
-                    # In this case, this application may not be closed successfully.
                     wnck_utils.close_window_gracefully_async(session.window_id_the_int_type)
             else:
                 session = a_process_with_many_windows[0]
@@ -271,9 +272,8 @@ class XSessionManager:
                 self._move_window(namespace_obj, need_retry=False)
 
     def _get_max_desktop_number(self, x_session_config_objects):
-        # TODO No need to use int() because the type of 'desktop_number' should be int, something is wrong
-        return max([int(x_session_config_object.desktop_number)
-                        for x_session_config_object in x_session_config_objects]) + 1
+        return max([x_session_config_object.desktop_number
+                    for x_session_config_object in x_session_config_objects]) + 1
 
     def __getstate__(self):
         self_dict = self.__dict__.copy()
@@ -318,8 +318,10 @@ class XSessionManager:
             x_session_config_objects.sort(key=attrgetter('desktop_number'))
             for running_window in x_session_config_objects:
                 if running_window.pid in pids:
-                    if running_window.window_title == namespace_obj.window_title \
-                            and running_window.desktop_number != int(desktop_number):
+                    if running_window.window_title == namespace_obj.window_title:
+                        if running_window.desktop_number == int(desktop_number):
+                            print('"%s" is already in Workspace %s' % (running_window.window_title, desktop_number))
+                            continue
                         moving_windows.append(running_window)
                         no_need_to_move = False
                         # break
@@ -336,7 +338,8 @@ class XSessionManager:
                 if running_window_id in self._moved_windowids_cache:
                     continue
                 print('Moving window to desktop:           [%s : %s]' % (running_window.window_title, desktop_number))
-                wmctl_wrapper.move_window_to(running_window_id, desktop_number)
+                wmctl_wrapper.move_window_to(running_window_id, str(desktop_number))
+                # wnck_utils.move_window_to(running_window.window_id_the_int_type, desktop_number)
                 self._moved_windowids_cache.append(running_window_id)
                 # Wait some time to prevent 'X Error of failed request:  BadWindow (invalid Window parameter)'
                 # sleep(0.25)
@@ -347,8 +350,6 @@ class XSessionManager:
             print(traceback.format_exc())
 
     def set_position_and_move(self, x_session_config_objects: List[XSessionConfigObject]):
-
-        handled_x_session_config_object_index = []
 
         import gi
         gi.require_version('Wnck', '3.0')
@@ -363,13 +364,14 @@ class XSessionManager:
             app: Wnck.Application = opened_window.get_application()
             app_name = app.get_name()
             opened_window_title_name = opened_window.get_name()
-            print('Handle window named "%s" for app named "%s"' % (opened_window_title_name, app_name))
+            # print('Handle window named "%s" for app named "%s"' % (opened_window_title_name, app_name))
 
             window_id = opened_window.get_xid()
             opened_window_pid = opened_window.get_pid()
             opened_window_pids = [c.pid for c in psutil.Process(opened_window_pid).children()]
             opened_window_pids.append(opened_window_pid)
 
+            handled_x_session_config_object_index = []
             for index, x_session_config_object in enumerate(x_session_config_objects):
                 desktop_number = int(x_session_config_object.desktop_number)
                 if desktop_number == -1:
@@ -377,6 +379,10 @@ class XSessionManager:
 
                 if opened_window_pid in opened_window_pids and\
                         x_session_config_object.window_title == opened_window_title_name:
+
+                    if desktop_number == opened_window.get_workspace().get_number():
+                        print('"%s" is already in Workspace %d' % (opened_window_title_name, desktop_number))
+                        continue
 
                     # Move the window to a workspace
                     # self._move_window(x_session_config_object, x_session_config_object.pid, need_retry=False)
@@ -406,11 +412,13 @@ class XSessionManager:
                                                if index not in handled_x_session_config_object_index]
 
             if len(x_session_config_objects) <= 0:
-                print('Done! Leaving Gtk main loop.')
+                print('Completed to move windows. Leaving Gtk loop.')
                 Gtk.main_quit()
 
-        screen.connect('window-opened', do_window_opened)
-        Gtk.main()
+        max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
+        with self.create_enough_workspaces(max_desktop_number):
+            screen.connect('window-opened', do_window_opened)
+            Gtk.main()
 
     def set_position_and_move_async(self, x_session_config_objects_copy):
         t = threading.Thread(target=self.set_position_and_move, args=(x_session_config_objects_copy,))
