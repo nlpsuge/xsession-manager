@@ -172,7 +172,8 @@ class XSessionManager:
                                       % (app_name, str(cmd)))
                                 continue
 
-                            process = subprocess_utils.run_cmd(cmd)
+                            namespace_obj.cmd = [c for c in cmd if c != "--gapplication-service"]
+                            process = subprocess_utils.run_cmd(namespace_obj.cmd)
                             namespace_obj.pid = process.pid
                             # print('Success to restore application:     [%s]' % app_name)
 
@@ -184,9 +185,11 @@ class XSessionManager:
                             print('Failure to restore the application named %s due to the previous error' % app_name)
 
                     _x_session_config_objects_copy[:] = [o for index, o in enumerate(_x_session_config_objects_copy)
-                                                         if index in failed_restores]
+                                                         if index not in failed_restores]
 
                 x_session_config_objects_copy = copy.deepcopy(x_session_config_objects)
+                for x_session_config_object in x_session_config_objects_copy:
+                    x_session_config_object.pid = None
                 restore_thread = restore_sessions_async(x_session_config_objects_copy)
                 move_thread = self.set_position_and_move_async(x_session_config_objects_copy)
                 restore_thread.join()
@@ -364,12 +367,18 @@ class XSessionManager:
             app: Wnck.Application = opened_window.get_application()
             app_name = app.get_name()
             opened_window_title_name = opened_window.get_name()
-            # print('Handle window named "%s" for app named "%s"' % (opened_window_title_name, app_name))
 
             window_id = opened_window.get_xid()
             opened_window_pid = opened_window.get_pid()
+            # The opened_window_pid may not equal the value stored in x_session_config_objects
             opened_window_pids = [c.pid for c in psutil.Process(opened_window_pid).children()]
+            if len(opened_window_pids) <= 0:
+                opened_window_pids = [p.pid for p in psutil.Process(opened_window_pid).parents()]
+                # opened_window_pids = [psutil.Process(opened_window_pid).parent()]
             opened_window_pids.append(opened_window_pid)
+
+            print("Handle window named '%s' for app named '%s', it's pid is '%d'" %
+                  (opened_window_title_name, app_name, opened_window_pid))
 
             handled_x_session_config_object_index = []
             for index, x_session_config_object in enumerate(x_session_config_objects):
@@ -377,10 +386,24 @@ class XSessionManager:
                 if desktop_number == -1:
                     continue
 
-                if opened_window_pid in opened_window_pids and\
-                        x_session_config_object.window_title == opened_window_title_name:
+                while x_session_config_object.pid is None:
+                    sleep(0.25)
+                    if x_session_config_object.pid is not None:
+                        break
+
+                if x_session_config_object.pid in opened_window_pids:
+                    # No need to handle this case. Some application like Gedit don't have a file path in its cmd
+                    # So the two titles are different
+                    if x_session_config_object.window_title != opened_window_title_name:
+                        handled_x_session_config_object_index.append(index)
+                        print("Two window titles are different, the saved one (%s) is '%s' "
+                              "and the running one (%s) is '%s' "
+                              % (x_session_config_object.app_name, x_session_config_object.window_title,
+                                 app_name, opened_window_title_name))
+                        continue
 
                     if desktop_number == opened_window.get_workspace().get_number():
+                        handled_x_session_config_object_index.append(index)
                         print('"%s" is already in Workspace %d' % (opened_window_title_name, desktop_number))
                         continue
 
@@ -414,6 +437,9 @@ class XSessionManager:
             if len(x_session_config_objects) <= 0:
                 print('Completed to move windows. Leaving Gtk loop.')
                 Gtk.main_quit()
+
+            print("Remaining sessions: %s . Size: %d" %
+                  (x_session_config_objects, len(x_session_config_objects)))
 
         max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
         with self.create_enough_workspaces(max_desktop_number):
