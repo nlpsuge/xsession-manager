@@ -12,7 +12,7 @@ from operator import attrgetter
 from pathlib import Path
 from time import time, sleep
 from types import SimpleNamespace as Namespace
-from typing import List
+from typing import List, Dict, Any, Union
 
 import psutil
 
@@ -38,6 +38,10 @@ class XSessionManager:
         self.base_location_of_backup_sessions = base_location_of_backup_sessions
 
         self._moved_windowids_cache = []
+        self._suppress_log_if_already_in_workspace = False
+        self.opened_window_id_pid: Dict[int, List[int]] = {}
+        self.opened_window_id_pid_old: Dict[int, List[int]] = {}
+        self.opened_window_id_pid_lock = threading.RLock()
 
     def save_session(self, session_name: str, session_filter: SessionFilter=None):
         x_session_config = self.get_session_details(remove_duplicates_by_pid=False,
@@ -161,7 +165,10 @@ class XSessionManager:
                     return t
 
                 def restore_sessions(_x_session_config_objects_copy: List[XSessionConfigObject]):
+                    self._suppress_log_if_already_in_workspace = True
+
                     failed_restores = []
+                    succeeded_restores = []
                     for index, namespace_obj in enumerate(_x_session_config_objects_copy):
                         cmd: list = namespace_obj.cmd
                         app_name: str = namespace_obj.app_name
@@ -175,7 +182,14 @@ class XSessionManager:
                             namespace_obj.cmd = [c for c in cmd if c != "--gapplication-service"]
                             process = subprocess_utils.run_cmd(namespace_obj.cmd)
                             namespace_obj.pid = process.pid
+                            succeeded_restores.append(index)
+                            # if len(self._moved_windowids_cache) < len(succeeded_restores):
+                            self.move_window(session_name)
                             # print('Success to restore application:     [%s]' % app_name)
+
+                            # window_id_the_int_type = self.get_opened_window_id_by_pid(process.pid)
+                            # if window_id_the_int_type is not None:
+                            #     wnck_utils.move_window_to(window_id_the_int_type, namespace_obj.desktop_number)
 
                             # Wait some time, in case of freezing the entire system
                             sleep(restoring_interval)
@@ -187,13 +201,23 @@ class XSessionManager:
                     _x_session_config_objects_copy[:] = [o for index, o in enumerate(_x_session_config_objects_copy)
                                                          if index not in failed_restores]
 
+                    # Retry about 2 minutes
+                    retry_count_down = 60
+                    while retry_count_down > 0:
+                        retry_count_down = retry_count_down - 1
+                        sleep(1.5)
+                        xsm = XSessionManager(self.session_filters)
+                        xsm._suppress_log_if_already_in_workspace = True
+                        xsm.move_window(session_name)
+
                 x_session_config_objects_copy = copy.deepcopy(x_session_config_objects)
                 for x_session_config_object in x_session_config_objects_copy:
                     x_session_config_object.pid = None
-                restore_thread = restore_sessions_async(x_session_config_objects_copy)
-                move_thread = self.set_position_and_move_async(x_session_config_objects_copy)
-                restore_thread.join()
-                move_thread.join()
+
+                max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
+                with self.create_enough_workspaces(max_desktop_number):
+                    restore_thread = restore_sessions_async(x_session_config_objects_copy)
+                    restore_thread.join()
                 print('Done!')
 
     @contextmanager
@@ -268,7 +292,6 @@ class XSessionManager:
                     continue
                 x_session_config_objects[:] = session_filter(x_session_config_objects)
 
-        self._moving_windows_pool = Pool(processes=cpu_count())
         max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
         with self.create_enough_workspaces(max_desktop_number):
             for namespace_obj in x_session_config_objects:
@@ -323,7 +346,8 @@ class XSessionManager:
                 if running_window.pid in pids:
                     if running_window.window_title == namespace_obj.window_title:
                         if running_window.desktop_number == int(desktop_number):
-                            print('"%s" is already in Workspace %s' % (running_window.window_title, desktop_number))
+                            if not self._suppress_log_if_already_in_workspace:
+                                print('"%s" is already in Workspace %s' % (running_window.window_title, desktop_number))
                             continue
                         moving_windows.append(running_window)
                         no_need_to_move = False
@@ -450,4 +474,56 @@ class XSessionManager:
         t = threading.Thread(target=self.set_position_and_move, args=(x_session_config_objects_copy,))
         t.start()
         return t
+
+    def _get_opened_windows(self):
+        import gi
+        gi.require_version('Wnck', '3.0')
+        gi.require_version('Gtk', '3.0')
+        from gi.repository import Wnck
+        from gi.repository import Gtk
+
+        screen: Wnck.Screen = Wnck.Screen.get_default()
+        screen.force_update()
+
+        # opened_window_id_pid: Dict[Any, Any] = {}
+
+        def do_window_opened(this_screen: Wnck.Screen, opened_window: Wnck.Window):
+            app: Wnck.Application = opened_window.get_application()
+            app_name = app.get_name()
+            opened_window_title_name = opened_window.get_name()
+
+            window_id = opened_window.get_xid()
+            opened_window_pid = opened_window.get_pid()
+            # The opened_window_pid may not equal the value stored in x_session_config_objects
+            opened_window_pids = [c.pid for c in psutil.Process(opened_window_pid).children()]
+            if len(opened_window_pids) <= 0:
+                opened_window_pids = [p.pid for p in psutil.Process(opened_window_pid).parents()]
+                # opened_window_pids = [psutil.Process(opened_window_pid).parent()]
+            opened_window_pids.append(opened_window_pid)
+
+            self.get_opened_window_id_pid()[window_id] = opened_window_pids
+
+        screen.connect('window-opened', do_window_opened)
+        Gtk.main()
+
+    def _get_opened_windows_async(self):
+        t = threading.Thread(target=self._get_opened_windows)
+        t.start()
+        return t
+
+    def get_opened_window_id_pid(self) -> Dict[int, List[int]]:
+        self.opened_window_id_pid_lock.acquire()
+        try:
+            return self.opened_window_id_pid
+        finally:
+            self.opened_window_id_pid_lock.release()
+
+    def get_opened_window_id_by_pid(self, process_pid):
+        opened_window_id_pid: Dict[int, List[int]] = self.get_opened_window_id_pid()
+        for xid, pids in opened_window_id_pid.items():
+            for pid in pids:
+                if pid == process_pid:
+                    return xid
+
+        return None
 
