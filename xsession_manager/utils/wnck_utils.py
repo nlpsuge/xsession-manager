@@ -39,3 +39,12 @@ def get_workspace_count():
     screen: Wnck.Screen = Wnck.Screen.get_default()
     screen.force_update()
     return screen.get_workspace_count()
+
+
+def get_app_name(xid: int) -> str:
+    screen: Wnck.Screen = Wnck.Screen.get_default()
+    screen.force_update()
+    window: Wnck.Window = Wnck.Window.get(xid)
+    # See: https://developer.gnome.org/libwnck/stable/WnckWindow.html#wnck-window-get-class-group-name
+    # See: https://tronche.com/gui/x/icccm/sec-4.html#WM_CLASS
+    return window.get_class_group_name()

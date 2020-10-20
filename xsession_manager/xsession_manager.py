@@ -84,8 +84,8 @@ class XSessionManager:
         for idx, sd in enumerate(x_session_config_objects):
             try:
                 process = psutil.Process(sd.pid)
-                sd.app_name = process.name()
                 sd.cmd = process.cmdline()
+                sd.app_name = wnck_utils.get_app_name(sd.window_id_the_int_type)
                 sd.process_create_time = datetime.datetime.fromtimestamp(process.create_time()).strftime("%Y-%m-%d %H:%M:%S")
             except psutil.NoSuchProcess as e:
                 print('Failed to get process [%s] info using psutil due to: %s' % (sd, str(e)))
