@@ -10,6 +10,7 @@ from multiprocessing import cpu_count
 from multiprocessing.pool import Pool
 from operator import attrgetter
 from pathlib import Path
+from subprocess import CalledProcessError
 from time import time, sleep
 from types import SimpleNamespace as Namespace
 from typing import List, Dict, Any, Union
@@ -333,7 +334,13 @@ class XSessionManager:
 
             no_need_to_move = True
             moving_windows = []
-            running_windows = wmctl_wrapper.get_running_windows()
+            try:
+                running_windows = wmctl_wrapper.get_running_windows()
+            except CalledProcessError:
+                # Try again. Handle the error of 'X Error of failed request:  BadWindow (invalid Window parameter)'
+                sleep(0.25)
+                running_windows = wmctl_wrapper.get_running_windows()
+
             x_session_config: XSessionConfig = XSessionConfigObject.convert_wmctl_result_2_list(running_windows, False)
             x_session_config_objects: List[XSessionConfigObject] = x_session_config.x_session_config_objects
             x_session_config_objects.sort(key=attrgetter('desktop_number'))
