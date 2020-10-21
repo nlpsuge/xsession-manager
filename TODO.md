@@ -1,6 +1,7 @@
 Note that this to-do list may not cover all cases.
 
-- [ ] Support WINE-based application
+- [ ] Support WINE-based applications
+- [ ] Support Snap applications
 - [ ] Avoid saving system's applications
 - [x] Store settings in the json format file
 - [ ] Store settings in a kind of DB? No need for now, I think
@@ -25,7 +26,7 @@ Note that this to-do list may not cover all cases.
 - [ ] Improve code
 - [ ] Add missing configuration files
 - [ ] Automatically click OK button while closing a window
-- [ ] Using a log framework instead of print
+- [ ] Using a log framework instead of `print`
 - [ ] Provide -y/--yes option to answer 'yes' to all questions
   - [ ] Can not exit when using with `yes` command, pressing ctrl + c in terminal kill all applications
 - [x] Move windows to the workspace that they belong in last time 
