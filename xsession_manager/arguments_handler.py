@@ -177,10 +177,9 @@ def handle_arguments(args: Namespace):
                             position_values = []
                             for _ordered_key in _ordered_variables.keys():
                                 position_values.append(position_info[_ordered_key])
-                            print('  %s: %s' % (ordered_key.replace('_', ' '), ' '.join(position_values)))
+                            print('  %s: %s' % (ordered_key.replace('_', ' '), ' '.join(str(v) for v in position_values)))
                         elif type(value) is list:
                             print('  %s: %s' % (ordered_key.replace('_', ' '), ' '.join(value)))
-                            pass
                         else:
                             print('  %s: %s' % (ordered_key.replace('_', ' '), value))
                 print()
