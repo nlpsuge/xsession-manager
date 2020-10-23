@@ -47,7 +47,11 @@ def get_app_name(xid: int) -> str:
     window: Wnck.Window = Wnck.Window.get(xid)
     # See: https://developer.gnome.org/libwnck/stable/WnckWindow.html#wnck-window-get-class-group-name
     # See: https://tronche.com/gui/x/icccm/sec-4.html#WM_CLASS
-    return window.get_class_group_name()
+    name = window.get_class_group_name()
+    if name == 'Wine':  # eg: https://snapcraft.io/notepad-plus-plus
+        # Return a reasonable name
+        return window.get_class_instance_name()
+    return name
 
 
 def is_sticky(xid: int) -> bool:
