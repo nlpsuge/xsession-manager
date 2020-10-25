@@ -20,7 +20,7 @@ import psutil
 from session_filter import SessionFilter
 from settings.constants import Locations
 from settings.xsession_config import XSessionConfig, XSessionConfigObject
-from utils import wmctl_wrapper, subprocess_utils, retry, gio_utils, wnck_utils, snapd_workaround
+from utils import wmctl_wrapper, subprocess_utils, retry, gio_utils, wnck_utils, snapd_workaround, suppress_output
 
 
 class XSessionManager:
@@ -71,7 +71,9 @@ class XSessionManager:
 
         """
         Get the current running session details, including app name, process id,
-        window position, command line etc of each app. See XSessionConfigObject for more information.
+        window position, command line etc of each app.
+
+        See XSessionConfigObject for more information.
 
         :return: the current running session details
         """
@@ -176,8 +178,13 @@ class XSessionManager:
                         try:
                             print('Restoring application:              [%s]' % app_name)
                             if len(cmd) == 0:
-                                print('Failure to restore the application named %s due to empty commandline [%s]'
-                                      % (app_name, str(cmd)))
+                                so = suppress_output.SuppressOutput(True, True)
+                                with so.suppress_output():
+                                    launched = gio_utils.GDesktopAppInfo.launch_app(app_name)
+                                    if not launched:
+                                        print('Failure to restore the application named %s '
+                                              'due to empty commandline [%s]'
+                                              % (app_name, str(cmd)))
                                 continue
 
                             namespace_obj.cmd = [c for c in cmd if c != "--gapplication-service"]
@@ -198,6 +205,11 @@ class XSessionManager:
                                 if snapd.is_snap_app(part_cmd):
                                     print('%s is a Snap app' % app_name)
                                     launched = snapd.launch(list(set([app_name, app_name.lower()] + app_name.split('.'))))
+
+                                if not launched:
+                                    so = suppress_output.SuppressOutput(True, True)
+                                    with so.suppress_output():
+                                        launched = gio_utils.GDesktopAppInfo.launch_app(app_name)
 
                                 if not launched:
                                     raise fnfe
@@ -363,7 +375,7 @@ class XSessionManager:
                     if running_window.window_title == namespace_obj.window_title:
                         if running_window.desktop_number == int(desktop_number):
                             if not self._suppress_log_if_already_in_workspace:
-                                print('"%s" is already in Workspace %s' % (running_window.window_title, desktop_number))
+                                print('"%s" has already been in Workspace %s' % (running_window.window_title, desktop_number))
                             continue
                         moving_windows.append(running_window)
                         no_need_to_move = False
