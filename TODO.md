@@ -1,7 +1,7 @@
 Note that this to-do list may not cover all cases.
 
 - [ ] Support WINE-based applications
-- [ ] Support Snap applications
+- [x] Support Snap applications
 - [ ] Avoid saving system's applications
 - [x] Store settings in the json format file
 - [ ] Store settings in a kind of DB? No need for now, I think
