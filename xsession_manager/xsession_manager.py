@@ -20,7 +20,7 @@ import psutil
 from session_filter import SessionFilter
 from settings.constants import Locations
 from settings.xsession_config import XSessionConfig, XSessionConfigObject
-from utils import wmctl_wrapper, subprocess_utils, retry, gio_utils, wnck_utils
+from utils import wmctl_wrapper, subprocess_utils, retry, gio_utils, wnck_utils, snapd_workaround
 
 
 class XSessionManager:
@@ -181,14 +181,28 @@ class XSessionManager:
                                 continue
 
                             namespace_obj.cmd = [c for c in cmd if c != "--gapplication-service"]
-                            process = subprocess_utils.run_cmd(namespace_obj.cmd)
-                            namespace_obj.pid = process.pid
-                            succeeded_restores.append(index)
-                            self.move_window(session_name)
-                            # print('Success to restore application:     [%s]' % app_name)
+                            try:
+                                process = subprocess_utils.run_cmd(namespace_obj.cmd)
+                                namespace_obj.pid = process.pid
+                                succeeded_restores.append(index)
+                                self.move_window(session_name)
+                                # print('Success to restore application:     [%s]' % app_name)
 
-                            # Wait some time, in case of freezing the entire system
-                            sleep(restoring_interval)
+                                # Wait some time, in case of freezing the entire system
+                                sleep(restoring_interval)
+                            except FileNotFoundError as fnfe:
+                                launched = False
+                                part_cmd = namespace_obj.cmd[0]
+                                # Check if this is a Snap application
+                                snapd = snapd_workaround.Snapd()
+                                if snapd.is_snap_app(part_cmd):
+                                    print('%s is a Snap app' % app_name)
+                                    launched = snapd.launch(list(set([app_name, app_name.lower()] + app_name.split('.'))))
+
+                                if not launched:
+                                    raise fnfe
+                                else:
+                                    print('%s launched in Workspace %d' % (app_name, namespace_obj.desktop_number))
                         except Exception as e:
                             failed_restores.append(index)
                             print(traceback.format_exc())

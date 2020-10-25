@@ -1,5 +1,6 @@
 import gi
 from gi.overrides.Gio import Settings
+from gi.repository.Gio import DesktopAppInfo
 
 from settings import constants
 
@@ -35,3 +36,12 @@ class GSettings:
 
     def get_workspaces_number(self) -> int:
         return self.schema_num_workspaces.get_int(constants.GSettings.workspaces_number.key)
+
+
+class GDesktopAppInfo:
+
+    @staticmethod
+    def launch_app_via_desktop_file(desktop_file_path) -> bool:
+        launcher: DesktopAppInfo = DesktopAppInfo().new_from_filename(desktop_file_path)
+        launched = launcher.launch()
+        return launched

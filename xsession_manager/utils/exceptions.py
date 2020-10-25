@@ -1,0 +1,4 @@
+
+
+class MoreThanOneAppsFound(BaseException):
+    pass
