@@ -52,7 +52,7 @@ class Snapd:
             match = r.group()
             snap_app_name = re.split(r'[/|\\]+', match)[2]
             return True, snap_app_name
-        return False
+        return False, None
 
     def launch(self, app_names: List[str], suppress_stdout=True, suppress_stderr=True) -> bool:
         """
