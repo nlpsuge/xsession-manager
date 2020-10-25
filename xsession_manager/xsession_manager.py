@@ -202,9 +202,10 @@ class XSessionManager:
                                 part_cmd = namespace_obj.cmd[0]
                                 # Check if this is a Snap application
                                 snapd = snapd_workaround.Snapd()
-                                if snapd.is_snap_app(part_cmd):
+                                is_snap_app, snap_app_name = snapd.is_snap_app(part_cmd)
+                                if is_snap_app:
                                     print('%s is a Snap app' % app_name)
-                                    launched = snapd.launch(list(set([app_name, app_name.lower()] + app_name.split('.'))))
+                                    launched = snapd.launch([snap_app_name])
 
                                 if not launched:
                                     so = suppress_output.SuppressOutput(True, True)

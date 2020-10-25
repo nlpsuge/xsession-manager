@@ -40,3 +40,9 @@ def test_get_desktop_file():
         if 'desktop-file' in aa:
             desktop_file: str = aa['desktop-file']
             assert desktop_file.endswith('.desktop')
+
+
+def test_launch_app():
+    launched = snapd_workaround.Snapd().launch(['authy'], False, False)
+    assert launched is True
+

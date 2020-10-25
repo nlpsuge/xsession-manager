@@ -44,16 +44,23 @@ class Snapd:
         return result[0]
 
     @staticmethod
-    def is_snap_app(app_cmd: str):
+    def is_snap_app(app_cmd: str) -> (bool, str):
         # Visit https://regex101.com/r/SXUlVX/ to check the explanation of this regular expression pattern
         c = re.compile(r'([\/]|[\\]{,2})snap([\/]|[\\]{,2})[\w:\-]+([\/]|[\\]{,2})[\d]+')
-        return c.search(app_cmd) is not None
+        r = c.search(app_cmd)
+        if r is not None:
+            match = r.group()
+            snap_app_name = re.split(r'[/|\\]+', match)[2]
+            return True, snap_app_name
+        return False
 
-    def launch(self, app_names: List[str]) -> bool:
+    def launch(self, app_names: List[str], suppress_stdout=True, suppress_stderr=True) -> bool:
         """
         Launch a application according to the app names.
 
         :param app_names: application name list
+        :param suppress_stdout: suppress the stdout during the app launching
+        :param suppress_stderr: suppress the stderr during the app launching
         :return: True if any one application listed in the app_names can be launched; False otherwise.
         """
         for app_name in app_names:
@@ -61,7 +68,7 @@ class Snapd:
             if len(app) == 0:
                 continue
             df = app['desktop-file']
-            so = suppress_output.SuppressOutput(True, True)
+            so = suppress_output.SuppressOutput(suppress_stdout, suppress_stderr)
             with so.suppress_output():
                 return gio_utils.GDesktopAppInfo.launch_app_via_desktop_file(df)
 
