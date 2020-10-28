@@ -2,7 +2,8 @@
 
 
 def todict(obj):
-    """ Return the object's dict excluding private attributes,
+    """
+    Return the object's dict excluding private attributes,
     sqlalchemy state and relationship attributes.
     """
     excl = ('_sa_adapter', '_sa_instance_state')
