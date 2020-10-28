@@ -14,14 +14,14 @@ This project relies on [wmctrl](http://tripie.sweb.cz/utils/wmctrl/), which is w
 ## Usage:
 
 ```
-usage: main.py [-h] [-s [SAVE]] [-c [CLOSE_ALL [CLOSE_ALL ...]]] [-r [RESTORE]] [-ri RESTORING_INTERVAL] [-pr [PR]] [-l]
-               [-t DETAIL] [-x EXCLUDE [EXCLUDE ...]] [-i INCLUDE [INCLUDE ...]] [-ma [MOVE_AUTOMATICALLY]]
+usage: main.py [-h] [-s [SAVE]] [-c [CLOSE_ALL ...]] [-r [RESTORE]] [-ri RESTORING_INTERVAL] [-pr [PR]] [-l] [-t DETAIL]
+               [-x EXCLUDE [EXCLUDE ...]] [-i INCLUDE [INCLUDE ...]] [-ma [MOVE_AUTOMATICALLY]]
 
 optional arguments:
   -h, --help            show this help message and exit
   -s [SAVE], --save [SAVE]
                         Save the current session. Save to the default session if not specified a session name.
-  -c [CLOSE_ALL [CLOSE_ALL ...]], --close-all [CLOSE_ALL [CLOSE_ALL ...]]
+  -c [CLOSE_ALL ...], --close-all [CLOSE_ALL ...]
                         Close the windows gracefully. Close all windows if only -c/--close-all is present. You can specify
                         arguments to tell me which windows should be closed, that is <window_id>, <pid>, <app_name> or
                         <title_name> exactly the same as -x.
