@@ -180,7 +180,7 @@ class XSessionManager:
                             if len(cmd) == 0:
                                 so = suppress_output.SuppressOutput(True, True)
                                 with so.suppress_output():
-                                    launched = gio_utils.GDesktopAppInfo.launch_app(app_name)
+                                    launched = gio_utils.GDesktopAppInfo().launch_app(app_name)
                                     if not launched:
                                         print('Failure to restore the application named %s '
                                               'due to empty commandline [%s]'
@@ -208,14 +208,13 @@ class XSessionManager:
                                     launched = snapd.launch([snap_app_name])
 
                                 if not launched:
-                                    so = suppress_output.SuppressOutput(True, True)
-                                    with so.suppress_output():
-                                        launched = gio_utils.GDesktopAppInfo.launch_app(app_name)
+                                    launched = gio_utils.GDesktopAppInfo().launch_app(app_name)
 
                                 if not launched:
                                     raise fnfe
                                 else:
-                                    print('%s launched in Workspace %d' % (app_name, namespace_obj.desktop_number))
+                                    self.move_window(session_name)
+                                    print('%s launched' % app_name)
                         except Exception as e:
                             failed_restores.append(index)
                             print(traceback.format_exc())
