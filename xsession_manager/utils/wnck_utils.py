@@ -59,3 +59,11 @@ def is_sticky(xid: int) -> bool:
     screen.force_update()
     window: Wnck.Window = Wnck.Window.get(xid)
     return window.is_sticky()
+
+
+def count_windows(xid: int) -> int:
+    screen: Wnck.Screen = Wnck.Screen.get_default()
+    screen.force_update()
+    window: Wnck.Window = Wnck.Window.get(xid)
+    app: Wnck.Application = window.get_application()
+    return len(app.get_windows())

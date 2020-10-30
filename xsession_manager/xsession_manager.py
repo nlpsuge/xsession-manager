@@ -372,7 +372,9 @@ class XSessionManager:
             x_session_config_objects.sort(key=attrgetter('desktop_number'))
             for running_window in x_session_config_objects:
                 if running_window.pid in pids:
-                    if running_window.window_title == namespace_obj.window_title:
+                    windows_count = wnck_utils.count_windows(running_window.window_id_the_int_type)
+                    no_need_to_compare_title = (windows_count == 1)
+                    if no_need_to_compare_title or running_window.window_title == namespace_obj.window_title:
                         if running_window.desktop_number == int(desktop_number):
                             if not self._suppress_log_if_already_in_workspace:
                                 print('"%s" has already been in Workspace %s' % (running_window.window_title, desktop_number))
