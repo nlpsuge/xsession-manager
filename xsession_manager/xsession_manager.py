@@ -370,14 +370,19 @@ class XSessionManager:
             x_session_config: XSessionConfig = XSessionConfigObject.convert_wmctl_result_2_list(running_windows, False)
             x_session_config_objects: List[XSessionConfigObject] = x_session_config.x_session_config_objects
             x_session_config_objects.sort(key=attrgetter('desktop_number'))
+
+            # Used to calculate the number of windows of an app
+            pids_duplicate = [s.pid for s in x_session_config_objects]
+
             for running_window in x_session_config_objects:
                 if running_window.pid in pids:
-                    windows_count = wnck_utils.count_windows(running_window.window_id_the_int_type)
-                    no_need_to_compare_title = (windows_count == 1)
-                    if no_need_to_compare_title or running_window.window_title == namespace_obj.window_title:
+                    no_need_to_compare_title = (pids_duplicate.count(running_window.pid) == 1)
+                    if no_need_to_compare_title or self._is_same_window(running_window,
+                                                                        namespace_obj):
                         if running_window.desktop_number == int(desktop_number):
                             if not self._suppress_log_if_already_in_workspace:
-                                print('"%s" has already been in Workspace %s' % (running_window.window_title, desktop_number))
+                                print('"%s" has already been in Workspace %s' % (running_window.window_title,
+                                                                                 desktop_number))
                             continue
                         moving_windows.append(running_window)
                         no_need_to_move = False
@@ -405,4 +410,16 @@ class XSessionManager:
         except Exception as e:
             import traceback
             print(traceback.format_exc())
+
+    def _is_same_window(self, window1: XSessionConfigObject, window2: XSessionConfigObject):
+        # Deal with JetBrains products. Move the window if they are the same project.
+        app_name1 = wnck_utils.get_app_name(window1.window_id_the_int_type)
+        app_name2 = window2.app_name
+        if app_name1 == app_name2 and app_name1.startswith('jetbrains-'):
+            return window1.window_title.split(' ')[0] == window2.window_title.split(' ')[0]
+
+        if window1.window_title == window2.window_title:
+            return True
+
+        return False
 
