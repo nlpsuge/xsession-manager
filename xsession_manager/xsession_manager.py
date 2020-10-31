@@ -399,6 +399,9 @@ class XSessionManager:
                             if not self._suppress_log_if_already_in_workspace:
                                 print('"%s" has already been in Workspace %s' % (running_window.window_title,
                                                                                  desktop_number))
+                                # Record windows which are in it's Workspace already, so that we don't handle it later.
+                                if running_window.window_id not in self._moved_windowids_cache:
+                                    self._moved_windowids_cache.append(running_window.window_id)
                             continue
                         moving_windows.append(running_window)
                         no_need_to_move = False
