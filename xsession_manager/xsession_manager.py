@@ -43,6 +43,7 @@ class XSessionManager:
         self.opened_window_id_pid: Dict[int, List[int]] = {}
         self.opened_window_id_pid_old: Dict[int, List[int]] = {}
         self.opened_window_id_pid_lock = threading.RLock()
+        self._windows_can_not_be_moved: List[XSessionConfigObject] = []
 
     def save_session(self, session_name: str, session_filter: SessionFilter=None):
         x_session_config = self.get_session_details(remove_duplicates_by_pid=False,
@@ -319,6 +320,12 @@ class XSessionManager:
             for namespace_obj in x_session_config_objects:
                 self._move_window(namespace_obj, need_retry=False)
 
+        # Some apps may not be launched successfully due to any possible reason
+        if len(self._windows_can_not_be_moved) > 0:
+            print('Those windows cannot be moved: ')
+            for w in self._windows_can_not_be_moved:
+                print(w)
+
     def _get_max_desktop_number(self, x_session_config_objects):
         return max([x_session_config_object.desktop_number
                     for x_session_config_object in x_session_config_objects]) + 1
@@ -359,6 +366,7 @@ class XSessionManager:
                         break
 
             if len(pids) == 0:
+                self._windows_can_not_be_moved.append(namespace_obj)
                 return
 
             no_need_to_move = True
@@ -427,7 +435,7 @@ class XSessionManager:
         return False
 
     def _is_same_cmd(self, p: psutil.Process, second_cmd: List):
-        first_cmdline = p.cmdline()
+        first_cmdline = [c for c in p.cmdline() if c != "--gapplication-service"]
         first_one_is_snap_app, first_snap_app_name = snapd_workaround.Snapd.is_snap_app(first_cmdline[0])
         if first_one_is_snap_app:
             second_one_also_is_snap_app, second_snap_app_name = snapd_workaround.Snapd.is_snap_app(second_cmd[0])
