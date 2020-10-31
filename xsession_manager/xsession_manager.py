@@ -358,6 +358,9 @@ class XSessionManager:
                         pids.append(p.pid)
                         break
 
+            if len(pids) == 0:
+                return
+
             no_need_to_move = True
             moving_windows = []
             try:
