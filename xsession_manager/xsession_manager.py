@@ -354,7 +354,7 @@ class XSessionManager:
                     if len(p.cmdline()) <= 0:
                         continue
 
-                    if p.cmdline() == cmd:
+                    if self._is_same_cmd(p, cmd):
                         pids.append(p.pid)
                         break
 
@@ -425,4 +425,14 @@ class XSessionManager:
             return True
 
         return False
+
+    def _is_same_cmd(self, p: psutil.Process, second_cmd: List):
+        first_cmdline = p.cmdline()
+        first_one_is_snap_app, first_snap_app_name = snapd_workaround.Snapd.is_snap_app(first_cmdline[0])
+        if first_one_is_snap_app:
+            second_one_also_is_snap_app, second_snap_app_name = snapd_workaround.Snapd.is_snap_app(second_cmd[0])
+            if second_one_also_is_snap_app:
+                return first_snap_app_name == second_snap_app_name
+
+        return first_cmdline == second_cmd
 
