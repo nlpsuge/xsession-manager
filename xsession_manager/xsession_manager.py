@@ -322,10 +322,10 @@ class XSessionManager:
                 self._move_window(namespace_obj, need_retry=False)
 
         # Some apps may not be launched successfully due to any possible reason
-        if len(self._windows_can_not_be_moved) > 0:
-            print('Those windows cannot be moved: ')
-            for w in self._windows_can_not_be_moved:
-                print(w)
+        # if len(self._windows_can_not_be_moved) > 0:
+        #     print('Those windows cannot be moved: ')
+        #     for w in self._windows_can_not_be_moved:
+        #         print(w)
 
     def _get_max_desktop_number(self, x_session_config_objects):
         return max([x_session_config_object.desktop_number

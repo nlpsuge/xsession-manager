@@ -5,7 +5,8 @@ from time import time
 import gi
 
 gi.require_version('Wnck', '3.0')
-from gi.repository import Wnck
+gi.require_version('Gtk', '3.0')
+from gi.repository import Wnck, Gtk
 
 
 def close_window_gracefully_async(window_id):
@@ -43,6 +44,9 @@ def get_workspace_count():
 
 def get_app_name(xid: int) -> str:
     screen: Wnck.Screen = Wnck.Screen.get_default()
+    # In case that cannot get the window according to xid
+    while Gtk.events_pending():
+        Gtk.main_iteration()
     screen.force_update()
     window: Wnck.Window = Wnck.Window.get(xid)
     # See: https://developer.gnome.org/libwnck/stable/WnckWindow.html#wnck-window-get-class-group-name
