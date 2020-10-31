@@ -316,6 +316,10 @@ class XSessionManager:
                     continue
                 x_session_config_objects[:] = session_filter(x_session_config_objects)
 
+        if len(x_session_config_objects) == 0:
+            print('No application to move.')
+            return
+
         max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
         with self.create_enough_workspaces(max_desktop_number):
             for namespace_obj in x_session_config_objects:
