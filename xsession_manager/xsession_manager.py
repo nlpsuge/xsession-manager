@@ -21,7 +21,8 @@ import psutil
 from session_filter import SessionFilter
 from settings.constants import Locations
 from settings.xsession_config import XSessionConfig, XSessionConfigObject
-from utils import wmctl_wrapper, subprocess_utils, retry, gio_utils, wnck_utils, snapd_workaround, suppress_output
+from utils import wmctl_wrapper, subprocess_utils, retry, gio_utils, wnck_utils, snapd_workaround, suppress_output, \
+    string_utils
 
 
 class XSessionManager:
@@ -230,9 +231,11 @@ class XSessionManager:
                     while retry_count_down > 0:
                         retry_count_down = retry_count_down - 1
                         sleep(1.5)
-                        xsm = XSessionManager(self.session_filters)
-                        xsm._suppress_log_if_already_in_workspace = True
-                        xsm.move_window(session_name)
+                        # xsm = XSessionManager(self.session_filters)
+                        # xsm._suppress_log_if_already_in_workspace = True
+                        # xsm.move_window(session_name)
+                        self._suppress_log_if_already_in_workspace = True
+                        self.move_window(session_name)
 
                 x_session_config_objects_copy = copy.deepcopy(x_session_config_objects)
                 for x_session_config_object in x_session_config_objects_copy:
@@ -418,7 +421,10 @@ class XSessionManager:
                 running_window_id = running_window.window_id
                 if running_window_id in self._moved_windowids_cache:
                     continue
-                print('Moving window to desktop:           [%s : %s]' % (running_window.window_title, desktop_number))
+                window_title = running_window.window_title
+                if string_utils.empty_string(window_title):
+                    window_title = wnck_utils.get_app_name(running_window.window_id_the_int_type)
+                print('Moving window to desktop:           [%s : %s]' % (window_title, desktop_number))
                 wmctl_wrapper.move_window_to(running_window_id, str(desktop_number))
                 # wnck_utils.move_window_to(running_window.window_id_the_int_type, desktop_number)
                 self._moved_windowids_cache.append(running_window_id)
