@@ -21,7 +21,7 @@ def move_window_to(window_id, desktop_number):
     if ws is None:
         print('Workspace(%d) not found!' % desktop_number)
     else:
-        window: Wnck.Window = Wnck.Window.get(window_id)
+        window: Wnck.Window = get_window(window_id)
         window.move_to_workspace(ws)
 
 
