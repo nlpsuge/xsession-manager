@@ -276,7 +276,7 @@ class XSessionManager:
         else:
             yield
 
-    def close_windows(self):
+    def close_windows(self, including_apps_with_multiple_windows: bool = False):
         sessions: List[XSessionConfigObject] = \
             self.get_session_details(remove_duplicates_by_pid=False,
                                      session_filters=self.session_filters).x_session_config_objects
@@ -289,11 +289,12 @@ class XSessionManager:
         for pid, group_by_pid in groupby(sessions, key=attrgetter('pid')):
             a_process_with_many_windows: List[XSessionConfigObject] = list(group_by_pid)
             if len(a_process_with_many_windows) > 1:
-                a_process_with_many_windows.sort(key=attrgetter('window_id'), reverse=True)
-                # Close one application's windows one by one from the last one
-                for session in a_process_with_many_windows:
-                    print('Closing %s(%s %s).' % (session.app_name, session.window_id, session.pid))
-                    wnck_utils.close_window_gracefully_async(session.window_id_the_int_type)
+                if including_apps_with_multiple_windows:
+                    a_process_with_many_windows.sort(key=attrgetter('window_id'), reverse=True)
+                    # Close one application's windows one by one from the last one
+                    for session in a_process_with_many_windows:
+                        print('Closing %s(%s %s).' % (session.app_name, session.window_id, session.pid))
+                        wnck_utils.close_window_gracefully_async(session.window_id_the_int_type)
             else:
                 session = a_process_with_many_windows[0]
                 print('Closing %s(%s %s).' % (session.app_name, session.window_id, session.pid))
@@ -425,8 +426,8 @@ class XSessionManager:
                 if string_utils.empty_string(window_title):
                     window_title = wnck_utils.get_app_name(running_window.window_id_the_int_type)
                 print('Moving window to desktop:           [%s : %s]' % (window_title, desktop_number))
-                wmctl_wrapper.move_window_to(running_window_id, str(desktop_number))
-                # wnck_utils.move_window_to(running_window.window_id_the_int_type, desktop_number)
+                # wmctl_wrapper.move_window_to(running_window_id, str(desktop_number))
+                wnck_utils.move_window_to(running_window.window_id_the_int_type, desktop_number)
                 self._moved_windowids_cache.append(running_window_id)
                 # Wait some time to prevent 'X Error of failed request:  BadWindow (invalid Window parameter)'
                 # sleep(0.25)

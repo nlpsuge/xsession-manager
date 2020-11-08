@@ -16,12 +16,15 @@ def close_window_gracefully_async(window_id: int):
 
 def move_window_to(window_id, desktop_number):
     screen: Wnck.Screen = Wnck.Screen.get_default()
-    # screen.force_update()
+    # In case that cannot get the Wnck.Workspace instance
+    while Gtk.events_pending():
+        Gtk.main_iteration()
+    screen.force_update()
     ws = screen.get_workspace(desktop_number)
     if ws is None:
-        print('Workspace(%d) not found!' % desktop_number)
+        print('Workspace %d not found!' % desktop_number)
     else:
-        window: Wnck.Window = Wnck.Window.get(window_id)
+        window: Wnck.Window = get_window(window_id)
         window.move_to_workspace(ws)
 
 
