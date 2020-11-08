@@ -45,6 +45,11 @@ def check_and_reset_args(args: Namespace):
         args.move_automatically = Locations.DEFAULT_SESSION_NAME
         move_automatically = args.move_automatically
 
+    # -im/--including-apps-with-multiple-windows can only be used along with -c/--close-all
+    if ('-im' in argv or '--including-apps-with-multiple-windows' in argv) and not ('-c' in argv or '--close-all' in argv):
+        raise argparse.ArgumentTypeError('argument -im/--including-apps-with-multiple-windows : '
+                                         'only allowed with -c/--close-all')
+
     print('Namespace object after handling by this program: ' + str(args))
 
     if save or restore or close_all:
@@ -101,6 +106,7 @@ def handle_arguments(args: Namespace):
     exclude: list = args.exclude
     include: list = args.include
     move_automatically = args.move_automatically
+    including_apps_with_multiple_windows = args.including_apps_with_multiple_windows
 
     if session_name_for_saving:
         print(constants.Prompts.MSG_SAVE)
@@ -115,7 +121,7 @@ def handle_arguments(args: Namespace):
         xsm = XSessionManager([IncludeSessionFilter(close_all),
                                IncludeSessionFilter(include),
                                ExcludeSessionFilter(exclude)])
-        xsm.close_windows()
+        xsm.close_windows(including_apps_with_multiple_windows)
         print('Done!')
 
     if session_name_for_restoring:
