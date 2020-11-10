@@ -92,6 +92,8 @@ class XSessionManager:
                 sd.cmd = process.cmdline()
                 sd.app_name = wnck_utils.get_app_name(sd.window_id_the_int_type)
                 sd.process_create_time = datetime.datetime.fromtimestamp(process.create_time()).strftime("%Y-%m-%d %H:%M:%S")
+                sd.cpu_percent = process.cpu_percent()
+                sd.memory_percent = process.memory_percent()
             except psutil.NoSuchProcess as e:
                 print('Failed to get process [%s] info using psutil due to: %s' % (sd, str(e)))
                 sd.app_name = ''
@@ -243,6 +245,7 @@ class XSessionManager:
 
                 max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
                 with self.create_enough_workspaces(max_desktop_number):
+                    x_session_config_objects_copy.sort(key=attrgetter('memory_percent'), reverse=True)
                     restore_thread = restore_sessions_async(x_session_config_objects_copy)
                     restore_thread.join()
                 print('Done!')
