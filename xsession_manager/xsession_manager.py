@@ -330,7 +330,11 @@ class XSessionManager:
         max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
         with self.create_enough_workspaces(max_desktop_number):
             for namespace_obj in x_session_config_objects:
-                self._move_window(namespace_obj, need_retry=False)
+                try:
+                    self._move_window(namespace_obj, need_retry=False)
+                except:  # Catch all exceptions to be able to restore other apps
+                    import traceback
+                    print(traceback.format_exc())
 
         # Some apps may not be launched successfully due to any possible reason
         # if len(self._windows_can_not_be_moved) > 0:
