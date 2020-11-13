@@ -11,7 +11,9 @@ from gi.repository import Wnck, Gtk
 
 def close_window_gracefully_async(window_id: int):
     window: Wnck.Window = get_window(window_id)
-    window.close(time())
+    # window may be None if this window has been closed by the user
+    if window:
+        window.close(time())
 
 
 def move_window_to(window_id, desktop_number):
