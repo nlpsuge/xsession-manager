@@ -1,7 +1,7 @@
 from typing import List
 
-from settings.xsession_config import XSessionConfigObject
-from utils.number_utils import is_int, is_hexadecimal
+from .settings.xsession_config import XSessionConfigObject
+from .utils.number_utils import is_int, is_hexadecimal
 
 
 def filter_session(session, includes):

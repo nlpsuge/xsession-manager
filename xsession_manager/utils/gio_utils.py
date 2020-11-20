@@ -5,9 +5,9 @@ import gi
 from gi.overrides.Gio import Settings
 from gi.repository.Gio import DesktopAppInfo
 
-from settings import constants
-from utils import suppress_output
-from utils.exceptions import MoreThanOneResultFound
+from ..settings import constants
+from . import suppress_output
+from .exceptions import MoreThanOneResultFound
 
 
 class _DesktopAppInfoObject:

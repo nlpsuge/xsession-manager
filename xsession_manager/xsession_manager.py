@@ -18,10 +18,10 @@ from typing import List, Dict, Any, Union
 
 import psutil
 
-from session_filter import SessionFilter
-from settings.constants import Locations
-from settings.xsession_config import XSessionConfig, XSessionConfigObject
-from utils import wmctl_wrapper, subprocess_utils, retry, gio_utils, wnck_utils, snapd_workaround, suppress_output, \
+from .session_filter import SessionFilter
+from .settings.constants import Locations
+from .settings.xsession_config import XSessionConfig, XSessionConfigObject
+from .utils import wmctl_wrapper, subprocess_utils, retry, gio_utils, wnck_utils, snapd_workaround, suppress_output, \
     string_utils
 
 
