@@ -2,8 +2,8 @@ import getpass
 import os
 import sys
 
-from arguments_parser import ArgumentsParser
-import arguments_handler
+from .arguments_parser import ArgumentsParser
+from . import arguments_handler
 
 
 def run():

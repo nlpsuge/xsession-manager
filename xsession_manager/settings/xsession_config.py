@@ -1,6 +1,6 @@
 # See also: https://linux.die.net/man/1/wmctrl
 
-from utils.base import Base
+from ..utils.base import Base
 
 
 class XSessionConfig(Base):

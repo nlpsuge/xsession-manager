@@ -9,8 +9,8 @@ from typing import Dict, List
 
 import pycurl
 
-from utils import gio_utils, suppress_output
-from utils.exceptions import MoreThanOneResultFound
+from . import gio_utils, suppress_output
+from .exceptions import MoreThanOneResultFound
 
 
 class Snapd:

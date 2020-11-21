@@ -7,13 +7,13 @@ from types import SimpleNamespace as Namespace
 import argparse
 from typing import List
 
-from gui.askyesno_dialog import create_askyesno_dialog
-from session_filter import ExcludeSessionFilter, IncludeSessionFilter
-from settings import constants
-from settings.constants import Locations
-from settings.xsession_config import XSessionConfigObject, XSessionConfig
-from utils import string_utils, wmctl_wrapper
-from xsession_manager import XSessionManager
+from .gui.askyesno_dialog import create_askyesno_dialog
+from .session_filter import ExcludeSessionFilter, IncludeSessionFilter
+from .settings import constants
+from .settings.constants import Locations
+from .settings.xsession_config import XSessionConfigObject, XSessionConfig
+from .utils import string_utils, wmctl_wrapper
+from .xsession_manager import XSessionManager
 
 
 def check_and_reset_args(args: Namespace):

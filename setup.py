@@ -12,7 +12,7 @@ long_description = (here / 'README.md').read_text(encoding='utf-8')
 setup(
     # pip install xsession-manager
     name='xsession-manager',
-    version='0.0.1',
+    version='1.0.0',
     description='A command line to save and restore sessions for X11 desktops like Gnome, with many other features',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -22,17 +22,19 @@ setup(
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: End Users/Desktop',
-        'Topic :: Management :: Session Manager :: X Session',
-        'License :: GNU General Public License v3.0',
+        'License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Topic :: Desktop Environment',
+        'Topic :: System :: Recovery Tools',
+        "Topic :: Utilities",
     ],
     keywords='manager, X.org, session, save and restore',
-    packages=find_packages(where='xsession_manager'),
+    packages=find_packages(include=['xsession_manager', 'xsession_manager.*']),
     python_requires='>=3',
 
     install_requires=[
@@ -42,8 +44,8 @@ setup(
 
     entry_points={  # Optional
         'console_scripts': [
-            'xsession-manager = xsession_manager.main:main',
-            'xsm = xsession_manager.main:main',
+            'xsession-manager = xsession_manager.main:run',
+            'xsm = xsession_manager.main:run',
         ],
     },
 
