@@ -14,6 +14,15 @@ This project relies on [wmctrl](http://tripie.sweb.cz/utils/wmctrl/), which is w
 ```Bash
 dnf install python3-devel python3-tkinter wmctrl
 ```
+### Install [xsession-manager](https://pypi.org/project/xsession-manager) via PyPi
+```Bash
+pip3 install xsession-manager
+```
+### Install xsession-manager via source code
+```Bash
+cd the_root_of_source_code
+python3 setup.py install
+```
 
 ## Usage:
 
@@ -54,7 +63,7 @@ optional arguments:
 ## If you want to restore the previous X session automatically after login
 Here is a solution. If you are using Fedora, create a file named ```auto-restore-working-state.desktop``` and the ```Exec``` should be:
 ```bash
-xsession-manager -pr
+xsm -pr
 ```
 Then put this file into ```~/.config/autostart```.
 
