@@ -10,7 +10,7 @@ This project relies on [wmctrl](http://tripie.sweb.cz/utils/wmctrl/), which is w
 
 ## Install
 ### Install dependencies
-#### Fedora 33
++ Fedora 33
 ```Bash
 dnf install python3-devel python3-tkinter wmctrl
 ```
@@ -23,6 +23,36 @@ pip3 install xsession-manager
 cd the_root_of_source_code
 python3 setup.py install
 ```
+## Common usage
++ Save running windows as a x session
+```Bash
+xsm -s
+```
++ Close running windows except those apps with mutiple windows. It's better to leave them to the user to close by hand, some apps like JetBrain's IDEs may have their own session.
+```Bash
+xsm -c
+```
++ Close running windows include those apps with mutiple windows.
+```Bash
+xsm -c -im
+```
++ Restore the saved x session
+```Bash
+xsm -r
+```
++ Move running windows to their Workspaces according to the saved x session
+```Bash
+xsm -ma
+```
++ List saved x sessions
+```Bash
+xsm -l
+```
++ View the details of a saved x sessions
+```Bash
+xsm -t xsession-default
+```
+
 
 ## Usage:
 
