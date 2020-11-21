@@ -24,7 +24,8 @@ Note that this to-do list may not cover all cases.
 - [ ] GTK/QT -based gui - in a separate project maybe.
 - [ ] Add tests based on pytest
 - [ ] Improve code
-- [ ] Add missing configuration files
+- [x] Add missing configuration files
+  - [x] Add setup.py
 - [ ] Automatically click OK button while closing a window
 - [ ] Using a log framework instead of `print`
 - [ ] Provide -y/--yes option to answer 'yes' to all questions
@@ -34,5 +35,5 @@ Note that this to-do list may not cover all cases.
   - [x] By using '-ma/--move-automatically'
   - [ ] Create enough workspaces before moving
     - [x] Support gnome via `gsettings`
-- [ ] Update requirements.txt
-  - [ ] python3-gobject is missing? 
+- [x] Update requirements.txt
+  - [x] python3-gobject is missing? No.
