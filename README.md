@@ -24,7 +24,7 @@ cd the_root_of_source_code
 python3 setup.py install
 ```
 ## Common usage
-+ Save running windows as a x session
++ Save running windows as a X session
 ```Bash
 xsm -s
 ```
@@ -36,19 +36,19 @@ xsm -c
 ```Bash
 xsm -c -im
 ```
-+ Restore the saved x session
++ Restore the saved X session
 ```Bash
 xsm -r
 ```
-+ Move running windows to their Workspaces according to the saved x session
++ Move running windows to their Workspaces according to the saved X session
 ```Bash
 xsm -ma
 ```
-+ List saved x sessions
++ List saved X sessions
 ```Bash
 xsm -l
 ```
-+ View the details of a saved x sessions
++ View the details of a saved X sessions
 ```Bash
 xsm -t xsession-default
 ```
@@ -66,7 +66,7 @@ optional arguments:
                         Save the current session. Save to the default session if not specified a session name.
   -c [CLOSE_ALL ...], --close-all [CLOSE_ALL ...]
                         Close the windows gracefully. Close all windows if only -c/--close-all is present. You can specify
-                        arguments to tell me which windows should be closed, that is <window_id>, <pid>, <app_name> or
+                        arguments to specify which windows should be closed, that is <window_id>, <pid>, <app_name> or
                         <title_name> exactly the same as -x.
   -im, --including-apps-with-multiple-windows
                         Close the windows gracefully including apps with multiple windows
@@ -96,6 +96,9 @@ Here is a solution. If you are using Fedora, create a file named ```auto-restore
 xsm -pr
 ```
 Then put this file into ```~/.config/autostart```.
+
+
+***NOTE: You can also use ```xsession-manager``` instead of ```xsm```.***
 
 ## Todo:
 [TODO](https://github.com/nlpsuge/xsession-manager/blob/master/TODO.md)
