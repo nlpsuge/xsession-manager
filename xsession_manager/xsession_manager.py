@@ -386,7 +386,7 @@ class XSessionManager:
 
                     if self._is_same_cmd(p, cmd):
                         pids.append(p.pid)
-                        break
+                        # break
 
             if len(pids) == 0:
                 self._windows_can_not_be_moved.append(namespace_obj)
