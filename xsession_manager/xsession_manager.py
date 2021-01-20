@@ -466,6 +466,9 @@ class XSessionManager:
     def _is_same_cmd(self, p: psutil.Process, second_cmd: List):
         first_cmdline = [c for c in p.cmdline() if (c != "--gapplication-service" and not c.startswith('--pid='))]
         second_cmd = [c for c in second_cmd if (c != "--gapplication-service" and not c.startswith('--pid='))]
+        if len(first_cmdline) <= 0 or len(second_cmd) <= 0:
+            return
+
         first_one_is_snap_app, first_snap_app_name = snapd_workaround.Snapd.is_snap_app(first_cmdline[0])
         if first_one_is_snap_app:
             second_one_also_is_snap_app, second_snap_app_name = snapd_workaround.Snapd.is_snap_app(second_cmd[0])
