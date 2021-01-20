@@ -21,7 +21,12 @@ class Snapd:
 
     def get_app(self, app_name: str) -> List[Dict]:
         self.curl.setopt(pycurl.URL, 'http://localhost/v2/apps?names=%s' % app_name)
-        r = self.curl.perform_rs()
+        try:
+            r = self.curl.perform_rs()
+        except:
+            print("Failed to query the app named '%s' via /run/snapd.socket" % app_name)
+            return []
+
         jr = json.loads(r)
 
         if jr['status-code'] == 200:
