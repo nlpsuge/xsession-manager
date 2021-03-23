@@ -7,6 +7,7 @@ Note that this to-do list may not cover all cases.
 - [ ] Store settings in a kind of DB? No need for now, I think
 - [x] Save a session (-a/--save)
 - [x] Restore a session (-r/--restore)
+  - [ ] Restore window sizes and positions (geometry) (See: https://github.com/nlpsuge/xsession-manager/issues/23)
 - [x] Close a session (-c/--close-all)
   - [x] Close selected apps (Split --close-all to --close [all|select]?)
 - [x] Add -x/--exclude option:
@@ -28,6 +29,7 @@ Note that this to-do list may not cover all cases.
   - [x] Add setup.py
 - [ ] Automatically click OK button while closing a window
 - [ ] Using a log framework instead of `print`
+  - [ ] Add '-v/--verbose' to print debugging information
 - [ ] Provide -y/--yes option to answer 'yes' to all questions
   - [ ] Can not exit when using with `yes` command, pressing ctrl + c in terminal kill all applications
 - [x] Move windows to the workspace that they belong in last time 
