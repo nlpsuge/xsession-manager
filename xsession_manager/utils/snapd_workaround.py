@@ -61,7 +61,7 @@ class Snapd:
 
     def launch(self, app_names: List[str], suppress_stdout=True, suppress_stderr=True) -> bool:
         """
-        Launch a application according to the app names.
+        Launch an application according to the app names.
 
         :param app_names: application name list
         :param suppress_stdout: suppress the stdout during the app launching

@@ -68,7 +68,7 @@ class GDesktopAppInfo:
         Multiple desktop files could be found. The current strategy is launching the matched desktop file if and only if
         finds one result.
 
-        :param app_name: The name of a application which is to be launched.
+        :param app_name: The name of an application which is to be launched.
                          It can be a partial name, like 'spotify' and 'com.spotify.Client'
         :return:
         """
