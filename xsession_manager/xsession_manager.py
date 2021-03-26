@@ -183,6 +183,7 @@ class XSessionManager:
                 max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
                 with self.create_enough_workspaces(max_desktop_number):
                     x_session_config_objects_copy.sort(key=attrgetter('memory_percent'), reverse=True)
+                    self.restore_geometry_async(x_session_config_objects_copy)
                     restore_thread = restore_sessions_async(x_session_config_objects_copy)
                     restore_thread.join()
                 print('Done!')
@@ -476,4 +477,59 @@ class XSessionManager:
                 return first_snap_app_name == second_snap_app_name
 
         return first_cmdline == second_cmd
+
+    def restore_geometry_async(self, _x_session_config_objects_copy: List[XSessionConfigObject]):
+        t = threading.Thread(target=self._restore_geometry,
+                             args=(_x_session_config_objects_copy,))
+        t.start()
+        return t
+
+    def _restore_geometry(self, _x_session_config_objects_copy: List[XSessionConfigObject]):
+        import gi
+        gi.require_version('Gtk', '3.0')
+        gi.require_version('Wnck', '3.0')
+        from gi.repository import Gtk
+        from gi.repository import Wnck
+
+        screen: Wnck.Screen = Wnck.Screen.get_default()
+        # screen.force_update()
+
+        def do_window_opened(screen: Wnck.Screen, opened_window: Wnck.Window):
+            # while Gtk.events_pending():
+            #     Gtk.main_iteration()
+            # screen.force_update()
+
+            app: Wnck.Application = opened_window.get_application()
+            app_name = app.get_name()
+            window_title = opened_window.get_name()
+            xid = opened_window.get_xid()
+
+            # print("Opening %s" % window_title)
+
+            _window_info_running: XSessionConfigObject = XSessionConfigObject()
+            _window_info_running.app_name = app_name
+            _window_info_running.window_title = window_title
+            _window_info_running.window_id_the_int_type = xid
+
+            for _window_info_saved in _x_session_config_objects_copy:
+                if self._is_same_window(_window_info_running, _window_info_saved):
+                    print("Restoring the geometry for '%s' ..." % window_title)
+                    xp = _window_info_saved.window_position.x_offset
+                    yp = _window_info_saved.window_position.y_offset
+                    widthp = _window_info_saved.window_position.width
+                    heightp = _window_info_saved.window_position.height
+
+                    geometry_mask: Wnck.WindowMoveResizeMask = (
+                            Wnck.WindowMoveResizeMask.X |
+                            Wnck.WindowMoveResizeMask.Y |
+                            Wnck.WindowMoveResizeMask.WIDTH |
+                            Wnck.WindowMoveResizeMask.HEIGHT)
+                    opened_window.set_geometry(Wnck.WindowGravity.CURRENT, geometry_mask, xp, yp, widthp, heightp)
+
+            # Let the Gtk instance to go away
+            # Gtk.main_quit()
+
+        screen.connect('window-opened', do_window_opened)
+        Gtk.main()
+
 
