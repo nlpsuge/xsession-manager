@@ -48,9 +48,10 @@ class XSessionConfigObject(Base):
             config.desktop_number = int(window[1])
             config.pid = int(window[2])
 
-            wnck_window: Wnck.Window = wnck_utils.get_window(config.window_id_the_int_type)
+            window_position = config.WindowPosition()
+
+            wnck_window: Wnck.Window = wnck_utils.WnckUtils().get_window(config.window_id_the_int_type)
             if wnck_window is not None:
-                window_position = config.WindowPosition()
                 geometry = wnck_window.get_geometry()
                 window_position.x_offset = geometry.xp
                 window_position.y_offset = geometry.yp
@@ -60,15 +61,22 @@ class XSessionConfigObject(Base):
 
                 config.window_title = wnck_window.get_name()
             else:
-                print("Warning: failed to get window's info via Wnck, please try again. (cause: window is None)")
-                config.window_title = ''
-
-            config.client_machine_name = window[7]
-            # The title will be empty in some case.
-            # For instance:
-            # Open a non-existence.docx file using LibreOffice, a 'non-existence.docx does not exist.'
-            # dialog popups. This dialog has no title in the result of 'wmctl -lpG'.
-            # config.window_title = window[8] if len(window) >= 9 else ''
+                # Failed to get window's info via Wnck, fallback to use wmctl to do it .
+                # Note that for a same window the results of Wnck and wmctl can be different,
+                # such as geometry and title.
+                # If so, apps may not be restored as it's supposed to be in the term of geometry,
+                # and apps may not even be restored due to different titles
+                window_position.x_offset = int(window[3])
+                window_position.y_offset = int(window[4])
+                window_position.width = int(window[5])
+                window_position.height = int(window[6])
+                config.window_position = window_position
+                config.client_machine_name = window[7]
+                # The title will be empty in some case.
+                # For instance:
+                # Open a non-existence.docx file using LibreOffice, a 'non-existence.docx does not exist.'
+                # dialog popups. This dialog has no title in the result of 'wmctl -lpG'.
+                config.window_title = window[8] if len(window) >= 9 else ''
 
             session_details.append(config)
 

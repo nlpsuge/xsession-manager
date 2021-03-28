@@ -33,6 +33,9 @@ class XSessionManager:
     base_location_of_sessions: str
     base_location_of_backup_sessions: str
 
+    condition_ready_to_resize_geometry: threading.Condition = threading.Condition()
+    ready_to_resize_geometry = False
+
     def __init__(self, session_filters: List[SessionFilter]=None,
                  base_location_of_sessions: str=Locations.BASE_LOCATION_OF_SESSIONS,
                  base_location_of_backup_sessions: str=Locations.BASE_LOCATION_OF_BACKUP_SESSIONS):
@@ -90,7 +93,7 @@ class XSessionManager:
             try:
                 process = psutil.Process(sd.pid)
                 sd.cmd = process.cmdline()
-                sd.app_name = wnck_utils.get_app_name(sd.window_id_the_int_type)
+                sd.app_name = wnck_utils.WnckUtils().get_app_name(sd.window_id_the_int_type)
                 sd.process_create_time = datetime.datetime.fromtimestamp(process.create_time()).strftime("%Y-%m-%d %H:%M:%S")
                 sd.cpu_percent = process.cpu_percent()
                 sd.memory_percent = process.memory_percent()
@@ -180,12 +183,17 @@ class XSessionManager:
                 for x_session_config_object in x_session_config_objects_copy:
                     x_session_config_object.pid = None
 
-                max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
-                with self.create_enough_workspaces(max_desktop_number):
-                    x_session_config_objects_copy.sort(key=attrgetter('memory_percent'), reverse=True)
-                    self.restore_geometry_async(x_session_config_objects_copy)
-                    restore_thread = restore_sessions_async(x_session_config_objects_copy)
-                    restore_thread.join()
+                self.restore_geometry_async(x_session_config_objects_copy)
+
+                with self.condition_ready_to_resize_geometry:
+                    self.condition_ready_to_resize_geometry.wait_for(lambda: self.ready_to_resize_geometry)
+
+                    max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
+                    with self.create_enough_workspaces(max_desktop_number):
+                        x_session_config_objects_copy.sort(key=attrgetter('memory_percent'), reverse=True)
+                        restore_thread = restore_sessions_async(x_session_config_objects_copy)
+                        restore_thread.join()
+
                 print('Done!')
 
     def _restore_sessions(self,
@@ -261,8 +269,9 @@ class XSessionManager:
     @contextmanager
     def create_enough_workspaces(self, max_desktop_number: int):
         # Create enough workspaces
-        if wnck_utils.is_gnome():
-            workspace_count = wnck_utils.get_workspace_count()
+        _wnck_utils = wnck_utils.WnckUtils()
+        if _wnck_utils.is_gnome():
+            workspace_count = _wnck_utils.get_workspace_count()
             if workspace_count >= max_desktop_number:
                 yield
                 return
@@ -305,11 +314,11 @@ class XSessionManager:
                     # Close one application's windows one by one from the last one
                     for session in a_process_with_many_windows:
                         print('Closing %s(%s %s).' % (session.app_name, session.window_id, session.pid))
-                        wnck_utils.close_window_gracefully_async(session.window_id_the_int_type)
+                        wnck_utils.WnckUtils().close_window_gracefully_async(session.window_id_the_int_type)
             else:
                 session = a_process_with_many_windows[0]
                 print('Closing %s(%s %s).' % (session.app_name, session.window_id, session.pid))
-                wnck_utils.close_window_gracefully_async(session.window_id_the_int_type)
+                wnck_utils.WnckUtils().close_window_gracefully_async(session.window_id_the_int_type)
 
             # Wait some time, in case of freezing the entire system
             sleep(0.25)
@@ -438,11 +447,12 @@ class XSessionManager:
                 if running_window_id in self._moved_windowids_cache:
                     continue
                 window_title = running_window.window_title
+                _wnck_utils = wnck_utils.WnckUtils()
                 if string_utils.empty_string(window_title):
-                    window_title = wnck_utils.get_app_name(running_window.window_id_the_int_type)
+                    window_title = _wnck_utils.get_app_name(running_window.window_id_the_int_type)
                 print('Moving window to desktop:           [%s : %s]' % (window_title, desktop_number))
                 # wmctl_wrapper.move_window_to(running_window_id, str(desktop_number))
-                wnck_utils.move_window_to(running_window.window_id_the_int_type, desktop_number)
+                _wnck_utils.move_window_to(running_window.window_id_the_int_type, desktop_number)
                 self._moved_windowids_cache.append(running_window_id)
                 # Wait some time to prevent 'X Error of failed request:  BadWindow (invalid Window parameter)'
                 # sleep(0.25)
@@ -452,9 +462,12 @@ class XSessionManager:
             import traceback
             print(traceback.format_exc())
 
-    def _is_same_window(self, window1: XSessionConfigObject, window2: XSessionConfigObject):
+    def _is_same_window(self,
+                        window1: XSessionConfigObject,
+                        window2: XSessionConfigObject,
+                        screen_force_update: bool=True):
         # Deal with JetBrains products. Move the window if they are the same project.
-        app_name1 = wnck_utils.get_app_name(window1.window_id_the_int_type)
+        app_name1 = wnck_utils.WnckUtils(screen_force_update).get_app_name(window1.window_id_the_int_type)
         app_name2 = window2.app_name
         if app_name1 == app_name2 and app_name1.startswith('jetbrains-'):
             return window1.window_title.split(' ')[0] == window2.window_title.split(' ')[0]
@@ -491,45 +504,45 @@ class XSessionManager:
         from gi.repository import Gtk
         from gi.repository import Wnck
 
-        screen: Wnck.Screen = Wnck.Screen.get_default()
-        # screen.force_update()
+        _wnck_utils = wnck_utils.WnckUtils()
 
-        def do_window_opened(screen: Wnck.Screen, opened_window: Wnck.Window):
-            # while Gtk.events_pending():
-            #     Gtk.main_iteration()
-            # screen.force_update()
+        self.condition_ready_to_resize_geometry.acquire()
+        try:
+            def do_window_opened(screen: Wnck.Screen, opened_window: Wnck.Window):
 
-            app: Wnck.Application = opened_window.get_application()
-            app_name = app.get_name()
-            window_title = opened_window.get_name()
-            xid = opened_window.get_xid()
+                app: Wnck.Application = opened_window.get_application()
+                app_name = app.get_name()
+                window_title = opened_window.get_name()
+                xid = opened_window.get_xid()
 
-            # print("Opening %s" % window_title)
+                _window_info_running: XSessionConfigObject = XSessionConfigObject()
+                _window_info_running.app_name = app_name
+                _window_info_running.window_title = window_title
+                _window_info_running.window_id_the_int_type = xid
 
-            _window_info_running: XSessionConfigObject = XSessionConfigObject()
-            _window_info_running.app_name = app_name
-            _window_info_running.window_title = window_title
-            _window_info_running.window_id_the_int_type = xid
+                for _window_info_saved in _x_session_config_objects_copy:
+                    if self._is_same_window(_window_info_running, _window_info_saved, False):
+                        print("Restoring the geometry for '%s' ..." % window_title)
+                        xp = _window_info_saved.window_position.x_offset
+                        yp = _window_info_saved.window_position.y_offset
+                        widthp = _window_info_saved.window_position.width
+                        heightp = _window_info_saved.window_position.height
 
-            for _window_info_saved in _x_session_config_objects_copy:
-                if self._is_same_window(_window_info_running, _window_info_saved):
-                    print("Restoring the geometry for '%s' ..." % window_title)
-                    xp = _window_info_saved.window_position.x_offset
-                    yp = _window_info_saved.window_position.y_offset
-                    widthp = _window_info_saved.window_position.width
-                    heightp = _window_info_saved.window_position.height
+                        geometry_mask: Wnck.WindowMoveResizeMask = (
+                                Wnck.WindowMoveResizeMask.X |
+                                Wnck.WindowMoveResizeMask.Y |
+                                Wnck.WindowMoveResizeMask.WIDTH |
+                                Wnck.WindowMoveResizeMask.HEIGHT)
+                        opened_window.set_geometry(Wnck.WindowGravity.CURRENT, geometry_mask, xp, yp, widthp, heightp)
 
-                    geometry_mask: Wnck.WindowMoveResizeMask = (
-                            Wnck.WindowMoveResizeMask.X |
-                            Wnck.WindowMoveResizeMask.Y |
-                            Wnck.WindowMoveResizeMask.WIDTH |
-                            Wnck.WindowMoveResizeMask.HEIGHT)
-                    opened_window.set_geometry(Wnck.WindowGravity.CURRENT, geometry_mask, xp, yp, widthp, heightp)
+                # Let the Gtk instance to go away
+                # Gtk.main_quit()
 
-            # Let the Gtk instance to go away
-            # Gtk.main_quit()
-
-        screen.connect('window-opened', do_window_opened)
-        Gtk.main()
+            _wnck_utils.screen.connect('window-opened', do_window_opened)
+            self.ready_to_resize_geometry = True
+            self.condition_ready_to_resize_geometry.notify()
+        finally:
+            self.condition_ready_to_resize_geometry.release()
+            Gtk.main()
 
 
