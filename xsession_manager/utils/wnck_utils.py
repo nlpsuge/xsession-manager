@@ -25,10 +25,10 @@ class WnckUtils:
             if self.screen is None:
                 self.screen: Wnck.Screen = Wnck.Screen.get_default()
 
-            if screen_force_update and self.screen_force_updated:
+            if screen_force_update and not self.screen_force_updated:
                 # In case that cannot get the Wnck.Workspace instance
-                while Gtk.events_pending():
-                    Gtk.main_iteration(False)
+                # while Gtk.events_pending():
+                #     Gtk.main_iteration()
                 self.screen.force_update()
                 self.screen_force_updated = True
 

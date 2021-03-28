@@ -35,6 +35,7 @@ class XSessionManager:
 
     condition_ready_to_resize_geometry: threading.Condition = threading.Condition()
     ready_to_resize_geometry = False
+    resize_geometry_lock = threading.Lock()
 
     def __init__(self, session_filters: List[SessionFilter]=None,
                  base_location_of_sessions: str=Locations.BASE_LOCATION_OF_SESSIONS,
@@ -224,7 +225,6 @@ class XSessionManager:
                     process = subprocess_utils.run_cmd(namespace_obj.cmd)
                     namespace_obj.pid = process.pid
                     succeeded_restores.append(index)
-                    self.move_window(session_name)
                     # print('Success to restore application:     [%s]' % app_name)
 
                     # Wait some time, in case of freezing the entire system
@@ -254,17 +254,6 @@ class XSessionManager:
 
         _x_session_config_objects_copy[:] = [o for index, o in enumerate(_x_session_config_objects_copy)
                                              if index not in failed_restores]
-
-        # Retry about 2 minutes
-        retry_count_down = 60
-        while retry_count_down > 0:
-            retry_count_down = retry_count_down - 1
-            sleep(1.5)
-            # xsm = XSessionManager(self.session_filters)
-            # xsm._suppress_log_if_already_in_workspace = True
-            # xsm.move_window(session_name)
-            self._suppress_log_if_already_in_workspace = True
-            self.move_window(session_name)
 
     @contextmanager
     def create_enough_workspaces(self, max_desktop_number: int):
@@ -509,34 +498,71 @@ class XSessionManager:
         self.condition_ready_to_resize_geometry.acquire()
         try:
             def do_window_opened(screen: Wnck.Screen, opened_window: Wnck.Window):
+                with self.resize_geometry_lock:
 
-                app: Wnck.Application = opened_window.get_application()
-                app_name = app.get_name()
-                window_title = opened_window.get_name()
-                xid = opened_window.get_xid()
+                    workspace = opened_window.get_workspace()
+                    workspace_number = workspace.get_number() if workspace else None
 
-                _window_info_running: XSessionConfigObject = XSessionConfigObject()
-                _window_info_running.app_name = app_name
-                _window_info_running.window_title = window_title
-                _window_info_running.window_id_the_int_type = xid
+                    app: Wnck.Application = opened_window.get_application()
+                    app_name = app.get_name()
+                    window_title = opened_window.get_name()
+                    xid = opened_window.get_xid()
 
-                for _window_info_saved in _x_session_config_objects_copy:
-                    if self._is_same_window(_window_info_running, _window_info_saved, False):
-                        print("Restoring the geometry for '%s' ..." % window_title)
-                        xp = _window_info_saved.window_position.x_offset
-                        yp = _window_info_saved.window_position.y_offset
-                        widthp = _window_info_saved.window_position.width
-                        heightp = _window_info_saved.window_position.height
+                    _window_info_running: XSessionConfigObject = XSessionConfigObject()
+                    _window_info_running.app_name = app_name
+                    _window_info_running.window_title = window_title
+                    _window_info_running.window_id_the_int_type = xid
 
-                        geometry_mask: Wnck.WindowMoveResizeMask = (
-                                Wnck.WindowMoveResizeMask.X |
-                                Wnck.WindowMoveResizeMask.Y |
-                                Wnck.WindowMoveResizeMask.WIDTH |
-                                Wnck.WindowMoveResizeMask.HEIGHT)
-                        opened_window.set_geometry(Wnck.WindowGravity.CURRENT, geometry_mask, xp, yp, widthp, heightp)
+                    for _window_info_saved in _x_session_config_objects_copy:
 
-                # Let the Gtk instance to go away
-                # Gtk.main_quit()
+                        is_same_cmd = False
+
+                        cmd = _window_info_saved.cmd
+                        pid = opened_window.get_pid()
+                        try:
+                            pprocess = psutil.Process(pid)
+                            processes: List = [pprocess] + [p for p in pprocess.children()]
+                            for p in processes:
+                                if len(p.cmdline()) <= 0:
+                                    continue
+
+                                if self._is_same_cmd(p, cmd):
+                                    is_same_cmd = True
+                        except psutil.NoSuchProcess:
+                            if pid == 0:
+                                is_same_cmd = True
+
+                        if is_same_cmd is False:
+                            for p in psutil.process_iter(attrs=['pid', 'cmdline']):
+                                if len(p.cmdline()) <= 0:
+                                    continue
+
+                                if self._is_same_cmd(p, cmd):
+                                    is_same_cmd = True
+
+                        if is_same_cmd and self._is_same_window(_window_info_running, _window_info_saved, False):
+                            desktop_number = _window_info_saved.desktop_number
+                            if workspace_number == desktop_number:
+                                print('"%s" has already been in Workspace %s' % (window_title,
+                                                                                 desktop_number))
+                            else:
+                                print('Moving window to desktop:           [%s : %s]' % (window_title, desktop_number))
+                                _wnck_utils.move_window_to(xid, desktop_number)
+
+                            print("Restoring the geometry for '%s' ..." % window_title)
+                            xp = _window_info_saved.window_position.x_offset
+                            yp = _window_info_saved.window_position.y_offset
+                            widthp = _window_info_saved.window_position.width
+                            heightp = _window_info_saved.window_position.height
+
+                            geometry_mask: Wnck.WindowMoveResizeMask = (
+                                    Wnck.WindowMoveResizeMask.X |
+                                    Wnck.WindowMoveResizeMask.Y |
+                                    Wnck.WindowMoveResizeMask.WIDTH |
+                                    Wnck.WindowMoveResizeMask.HEIGHT)
+                            opened_window.set_geometry(Wnck.WindowGravity.CURRENT, geometry_mask, xp, yp, widthp, heightp)
+
+                    Gtk.main_quit()
 
             _wnck_utils.screen.connect('window-opened', do_window_opened)
             self.ready_to_resize_geometry = True
