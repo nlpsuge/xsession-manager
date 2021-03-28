@@ -44,6 +44,9 @@ class WnckUtils:
             print('Workspace %d not found!' % desktop_number)
         else:
             window: Wnck.Window = self.get_window(window_id)
+            if window is None:
+                # Not sure why window is None sometimes
+                return
             window.move_to_workspace(ws)
 
     def is_gnome(self) -> bool:
