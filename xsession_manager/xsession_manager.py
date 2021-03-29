@@ -24,6 +24,11 @@ from .settings.xsession_config import XSessionConfig, XSessionConfigObject
 from .utils import wmctl_wrapper, subprocess_utils, retry, gio_utils, wnck_utils, snapd_workaround, suppress_output, \
     string_utils
 
+import gi
+gi.require_version('Gtk', '3.0')
+gi.require_version('Wnck', '3.0')
+from gi.repository import Gtk
+from gi.repository import Wnck
 
 class XSessionManager:
 
@@ -180,14 +185,40 @@ class XSessionManager:
                     t.start()
                     return t
 
+                exist_windows: List[XSessionConfigObject] = []
+
                 x_session_config_objects_copy = copy.deepcopy(x_session_config_objects)
                 for x_session_config_object in x_session_config_objects_copy:
                     x_session_config_object.pid = None
 
-                self.restore_geometry_async(x_session_config_objects_copy)
+                    cmd = x_session_config_object.cmd
+                    running_windows = wnck_utils.WnckUtils().get_windows()
+                    for running_window in running_windows:
+                        p = psutil.Process(running_window.get_pid())
+                        if len(p.cmdline()) <= 0:
+                            continue
+
+                        app: Wnck.Application = running_window.get_application()
+                        app_name = app.get_name()
+                        window_title = running_window.get_name()
+                        xid = running_window.get_xid()
+
+                        _window_info_running: XSessionConfigObject = XSessionConfigObject()
+                        _window_info_running.app_name = app_name
+                        _window_info_running.window_title = window_title
+                        _window_info_running.window_id_the_int_type = xid
+
+                        if self._is_same_cmd(p, cmd) and self._is_same_window(_window_info_running, x_session_config_object, False):
+                            exist_windows.append(x_session_config_object)
+
+                _need_restore_geometry = False
+                if len(exist_windows) != len(x_session_config_objects_copy):
+                    _need_restore_geometry = True
+                    self.restore_geometry_async(x_session_config_objects_copy)
 
                 with self.condition_ready_to_resize_geometry:
-                    self.condition_ready_to_resize_geometry.wait_for(lambda: self.ready_to_resize_geometry)
+                    self.condition_ready_to_resize_geometry.wait_for(lambda: _need_restore_geometry is False
+                                                                     or self.ready_to_resize_geometry)
 
                     max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
                     with self.create_enough_workspaces(max_desktop_number):
@@ -487,11 +518,6 @@ class XSessionManager:
         return t
 
     def _restore_geometry(self, _x_session_config_objects_copy: List[XSessionConfigObject]):
-        import gi
-        gi.require_version('Gtk', '3.0')
-        gi.require_version('Wnck', '3.0')
-        from gi.repository import Gtk
-        from gi.repository import Wnck
 
         _wnck_utils = wnck_utils.WnckUtils()
 
@@ -570,5 +596,4 @@ class XSessionManager:
         finally:
             self.condition_ready_to_resize_geometry.release()
             Gtk.main()
-
 

@@ -90,3 +90,6 @@ class WnckUtils:
 
         app: Wnck.Application = window.get_application()
         return app.get_n_windows()
+
+    def get_windows(self):
+        return self.screen.get_windows()
