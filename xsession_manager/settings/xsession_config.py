@@ -19,6 +19,8 @@ class XSessionConfig(Base):
 class XSessionConfigObject(Base):
 
     class WindowPosition(Base):
+        # Wnck or wmctl
+        provider: str
         x_offset: int
         y_offset: int
         width: int
@@ -57,6 +59,7 @@ class XSessionConfigObject(Base):
                 window_position.y_offset = geometry.yp
                 window_position.width = geometry.widthp
                 window_position.height = geometry.heightp
+                window_position.provider = 'Wnck'
                 config.window_position = window_position
 
                 config.window_title = wnck_window.get_name()
@@ -70,6 +73,7 @@ class XSessionConfigObject(Base):
                 window_position.y_offset = int(window[4])
                 window_position.width = int(window[5])
                 window_position.height = int(window[6])
+                window_position.provider = 'wmctl'
                 config.window_position = window_position
                 config.client_machine_name = window[7]
                 # The title will be empty in some case.
