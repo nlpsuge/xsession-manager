@@ -9,8 +9,7 @@ from typing import Dict, List
 
 import pycurl
 
-from . import gio_utils, suppress_output
-from .exceptions import MoreThanOneResultFound
+from . import gio_utils, suppress_output, string_utils
 
 
 class Snapd:
@@ -44,8 +43,20 @@ class Snapd:
         if len(result) == 0:
             return {}
         if len(result) > 1:
-            raise MoreThanOneResultFound('Multiple applications (%s) were found  according to %s'
-                                         % (result, app_name))
+            _r = [r for r in result if ('desktop-file' in r.keys()
+                                        and not string_utils.empty_string(r['desktop-file']))]
+            # Remove duplicates by desktop-file
+            _r_duplicates_removed = list({_e['desktop-file']: _e for _e in _r}.values())
+            if len(_r_duplicates_removed) == 0:
+                return {}
+            elif len(_r_duplicates_removed) == 1:
+                return _r_duplicates_removed[0]
+            if len(_r_duplicates_removed) > 1:
+                message = 'Found multiple desktop files (%s) according to "%s", use the first one (%s)'\
+                          % (_r_duplicates_removed, app_name, _r_duplicates_removed[0]['desktop-file'])
+                print(message)
+                return _r_duplicates_removed[0]
+
         return result[0]
 
     @staticmethod
