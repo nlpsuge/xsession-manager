@@ -76,9 +76,24 @@ def is_sticky(xid: int) -> bool:
     return window.is_sticky()
 
 
+def stick(xid: int, if_not_sticky: bool=True):
+    window: Wnck.Window = get_window(xid)
+    if if_not_sticky:
+        _is_sticky = window.is_sticky()
+        if not _is_sticky:
+            window.stick()
+    else:
+        window.stick()
+
+
 def is_above(xid: int) -> bool:
     window: Wnck.Window = get_window(xid)
     return window.is_above()
+
+
+def make_above(xid: int):
+    window: Wnck.Window = get_window(xid)
+    window.make_above()
 
 
 def count_windows(xid: int) -> int:

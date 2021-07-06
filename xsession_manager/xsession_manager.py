@@ -444,8 +444,11 @@ class XSessionManager:
                     window_title = wnck_utils.get_app_name(running_window.window_id_the_int_type)
                 print('Moving window to desktop:           [%s : %s]' % (window_title, desktop_number))
                 # wmctl_wrapper.move_window_to(running_window_id, str(desktop_number))
+                is_sticky = wnck_utils.is_sticky(running_window.window_id_the_int_type)
                 wnck_utils.move_window_to(running_window.window_id_the_int_type, desktop_number)
                 self._moved_windowids_cache.append(running_window_id)
+                if is_sticky:
+                    wnck_utils.stick(running_window.window_id_the_int_type)
                 # Wait some time to prevent 'X Error of failed request:  BadWindow (invalid Window parameter)'
                 # sleep(0.25)
         except retry.NeedRetryException as ne:
