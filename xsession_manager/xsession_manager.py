@@ -94,6 +94,9 @@ class XSessionManager:
                 sd.process_create_time = datetime.datetime.fromtimestamp(process.create_time()).strftime("%Y-%m-%d %H:%M:%S")
                 sd.cpu_percent = process.cpu_percent()
                 sd.memory_percent = process.memory_percent()
+                sd.window_properties = sd.WindowProperties()
+                sd.window_properties.is_above = wnck_utils.is_above(sd.window_id_the_int_type)
+                sd.window_properties.is_sticky = wnck_utils.is_sticky(sd.window_id_the_int_type)
             except psutil.NoSuchProcess as e:
                 print('Failed to get process [%s] info using psutil due to: %s' % (sd, str(e)))
                 sd.app_name = ''

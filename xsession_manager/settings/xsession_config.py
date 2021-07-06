@@ -13,6 +13,12 @@ class XSessionConfig(Base):
 
 class XSessionConfigObject(Base):
 
+    class WindowProperties(Base):
+        # If always on visible workspace
+        is_sticky: bool
+        # If always on top
+        is_above: bool
+
     class WindowPosition(Base):
         x_offset: int
         y_offset: int
@@ -30,6 +36,8 @@ class XSessionConfigObject(Base):
     app_name: str
     cmd: list
     process_create_time: str
+
+    window_properties: WindowProperties
 
     @staticmethod
     def convert_wmctl_result_2_list(windows_list: list, remove_duplicates_by_pid=True) -> XSessionConfig:

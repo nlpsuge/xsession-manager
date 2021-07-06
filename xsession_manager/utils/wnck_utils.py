@@ -72,10 +72,13 @@ def get_window_title(xid: int) -> str:
 
 
 def is_sticky(xid: int) -> bool:
-    screen: Wnck.Screen = Wnck.Screen.get_default()
-    screen.force_update()
-    window: Wnck.Window = Wnck.Window.get(xid)
+    window: Wnck.Window = get_window(xid)
     return window.is_sticky()
+
+
+def is_above(xid: int) -> bool:
+    window: Wnck.Window = get_window(xid)
+    return window.is_above()
 
 
 def count_windows(xid: int) -> int:
