@@ -106,3 +106,8 @@ def count_windows(xid: int) -> int:
 
     app: Wnck.Application = window.get_application()
     return app.get_n_windows()
+
+
+def get_monitor_number(xid: int):
+    window: Wnck.Window = Wnck.Window.get(xid)
+    return window.get_screen()

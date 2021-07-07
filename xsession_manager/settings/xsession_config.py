@@ -3,11 +3,16 @@
 from ..utils.base import Base
 
 
+class MonitorProperties(Base):
+    count: int
+
+
 class XSessionConfig(Base):
     session_name: str
     session_create_time: str
     backup_time: str
     restore_times: list = []
+    monitor_properties: MonitorProperties
     x_session_config_objects: list
 
 
@@ -38,6 +43,8 @@ class XSessionConfigObject(Base):
     process_create_time: str
 
     window_properties: WindowProperties
+
+    monitor_number: int
 
     @staticmethod
     def convert_wmctl_result_2_list(windows_list: list, remove_duplicates_by_pid=True) -> XSessionConfig:

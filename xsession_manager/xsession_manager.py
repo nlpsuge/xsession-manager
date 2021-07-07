@@ -20,9 +20,9 @@ import psutil
 
 from .session_filter import SessionFilter
 from .settings.constants import Locations
-from .settings.xsession_config import XSessionConfig, XSessionConfigObject
+from .settings.xsession_config import XSessionConfig, XSessionConfigObject, MonitorProperties
 from .utils import wmctl_wrapper, subprocess_utils, retry, gio_utils, wnck_utils, snapd_workaround, suppress_output, \
-    string_utils
+    string_utils, gdk_utils
 
 
 class XSessionManager:
@@ -64,6 +64,10 @@ class XSessionManager:
 
         # Save a new session
         x_session_config.session_create_time = datetime.datetime.fromtimestamp(time()).strftime("%Y-%m-%d %H:%M:%S.%f")
+
+        x_session_config.monitor_properties = MonitorProperties()
+        x_session_config.monitor_properties.count = gdk_utils.GdkUtils().get_monitor_count()
+
         save_session_details_json = json.dumps(x_session_config, default=lambda o: o.__dict__)
         print('Saving the new json format x session [%s] ' % save_session_details_json)
         self.write_session(session_path, save_session_details_json)
@@ -97,6 +101,7 @@ class XSessionManager:
                 sd.window_properties = sd.WindowProperties()
                 sd.window_properties.is_above = wnck_utils.is_above(sd.window_id_the_int_type)
                 sd.window_properties.is_sticky = wnck_utils.is_sticky(sd.window_id_the_int_type)
+                sd.monitor_number = wnck_utils.get_monitor_number(sd.window_id_the_int_type)
             except psutil.NoSuchProcess as e:
                 print('Failed to get process [%s] info using psutil due to: %s' % (sd, str(e)))
                 sd.app_name = ''
