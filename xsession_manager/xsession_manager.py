@@ -368,9 +368,9 @@ class XSessionManager:
         self._moving_windows_pool.apply_async(
             retry.Retry(6, 1).do_retry(self._move_window, (namespace_obj, pid)))
 
-    def _move_window(self, namespace_obj: XSessionConfigObject, pid: int = None, need_retry=True):
+    def _move_window(self, saved_window: XSessionConfigObject, pid: int = None, need_retry=True):
         try:
-            desktop_number = namespace_obj.desktop_number
+            desktop_number = saved_window.desktop_number
 
             pids = []
             if pid:
@@ -379,7 +379,7 @@ class XSessionManager:
 
             # Get process info according to command line
             if len(pids) == 0:
-                cmd = namespace_obj.cmd
+                cmd = saved_window.cmd
                 if len(cmd) <= 0:
                     return
 
@@ -392,7 +392,7 @@ class XSessionManager:
                         # break
 
             if len(pids) == 0:
-                self._windows_can_not_be_moved.append(namespace_obj)
+                self._windows_can_not_be_moved.append(saved_window)
                 return
 
             no_need_to_move = True
@@ -414,8 +414,9 @@ class XSessionManager:
             for running_window in x_session_config_objects:
                 if running_window.pid in pids:
                     no_need_to_compare_title = (counter[running_window.pid] == 1)
-                    if no_need_to_compare_title or self._is_same_window(running_window,
-                                                                        namespace_obj):
+                    if no_need_to_compare_title or\
+                            self._is_same_window(running_window,
+                                                 saved_window):
                         if running_window.desktop_number == int(desktop_number):
                             if not self._suppress_log_if_already_in_workspace:
                                 print('"%s" has already been in Workspace %s' % (running_window.window_title,
@@ -431,7 +432,7 @@ class XSessionManager:
                     no_need_to_move = False
 
             if need_retry and len(moving_windows) == 0:
-                raise retry.NeedRetryException(namespace_obj)
+                raise retry.NeedRetryException(saved_window)
             elif no_need_to_move:
                 return
 
@@ -449,6 +450,12 @@ class XSessionManager:
                 self._moved_windowids_cache.append(running_window_id)
                 if is_sticky:
                     wnck_utils.stick(running_window.window_id_the_int_type)
+                window_properties = saved_window.window_properties
+                if window_properties:
+                    if window_properties.is_sticky:
+                        wnck_utils.stick(running_window.window_id_the_int_type)
+                    if window_properties.is_above:
+                        wnck_utils.make_above(running_window.window_id_the_int_type)
                 # Wait some time to prevent 'X Error of failed request:  BadWindow (invalid Window parameter)'
                 # sleep(0.25)
         except retry.NeedRetryException as ne:
