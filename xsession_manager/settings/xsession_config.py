@@ -13,7 +13,7 @@ class XSessionConfig(Base):
 
 class XSessionConfigObject(Base):
 
-    class WindowProperties(Base):
+    class WindowState(Base):
         # If always on visible workspace
         is_sticky: bool
         # If always on top
@@ -37,7 +37,7 @@ class XSessionConfigObject(Base):
     cmd: list
     process_create_time: str
 
-    window_properties: WindowProperties
+    window_state: WindowState
 
     @staticmethod
     def convert_wmctl_result_2_list(windows_list: list, remove_duplicates_by_pid=True) -> XSessionConfig:

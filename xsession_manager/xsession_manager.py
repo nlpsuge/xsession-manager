@@ -94,9 +94,9 @@ class XSessionManager:
                 sd.process_create_time = datetime.datetime.fromtimestamp(process.create_time()).strftime("%Y-%m-%d %H:%M:%S")
                 sd.cpu_percent = process.cpu_percent()
                 sd.memory_percent = process.memory_percent()
-                sd.window_properties = sd.WindowProperties()
-                sd.window_properties.is_above = wnck_utils.is_above(sd.window_id_the_int_type)
-                sd.window_properties.is_sticky = wnck_utils.is_sticky(sd.window_id_the_int_type)
+                sd.window_state = sd.WindowState()
+                sd.window_state.is_above = wnck_utils.is_above(sd.window_id_the_int_type)
+                sd.window_state.is_sticky = wnck_utils.is_sticky(sd.window_id_the_int_type)
             except psutil.NoSuchProcess as e:
                 print('Failed to get process [%s] info using psutil due to: %s' % (sd, str(e)))
                 sd.app_name = ''
@@ -371,6 +371,7 @@ class XSessionManager:
     def _move_window(self, saved_window: XSessionConfigObject, pid: int = None, need_retry=True):
         try:
             desktop_number = saved_window.desktop_number
+            saved_window_state = saved_window.window_state
 
             pids = []
             if pid:
@@ -438,24 +439,21 @@ class XSessionManager:
 
             for running_window in moving_windows:
                 running_window_id = running_window.window_id
+                window_id_the_int_type = running_window.window_id_the_int_type
                 if running_window_id in self._moved_windowids_cache:
+                    self.fix_window_state(saved_window_state, window_id_the_int_type)
                     continue
                 window_title = running_window.window_title
                 if string_utils.empty_string(window_title):
-                    window_title = wnck_utils.get_app_name(running_window.window_id_the_int_type)
+                    window_title = wnck_utils.get_app_name(window_id_the_int_type)
                 print('Moving window to desktop:           [%s : %s]' % (window_title, desktop_number))
                 # wmctl_wrapper.move_window_to(running_window_id, str(desktop_number))
-                is_sticky = wnck_utils.is_sticky(running_window.window_id_the_int_type)
-                wnck_utils.move_window_to(running_window.window_id_the_int_type, desktop_number)
+                is_sticky = wnck_utils.is_sticky(window_id_the_int_type)
+                wnck_utils.move_window_to(window_id_the_int_type, desktop_number)
                 self._moved_windowids_cache.append(running_window_id)
-                if is_sticky:
-                    wnck_utils.stick(running_window.window_id_the_int_type)
-                window_properties = saved_window.window_properties
-                if window_properties:
-                    if window_properties.is_sticky:
-                        wnck_utils.stick(running_window.window_id_the_int_type)
-                    if window_properties.is_above:
-                        wnck_utils.make_above(running_window.window_id_the_int_type)
+                self.fix_window_state(saved_window_state, window_id_the_int_type)
+                if not wnck_utils.is_sticky(window_id_the_int_type) and is_sticky:
+                    wnck_utils.stick(window_id_the_int_type)
                 # Wait some time to prevent 'X Error of failed request:  BadWindow (invalid Window parameter)'
                 # sleep(0.25)
         except retry.NeedRetryException as ne:
@@ -463,6 +461,15 @@ class XSessionManager:
         except Exception as e:
             import traceback
             print(traceback.format_exc())
+
+    def fix_window_state(self,
+                         window_state: XSessionConfigObject.WindowState,
+                         window_id_the_int_type: int):
+        if window_state:
+            if window_state.is_sticky:
+                wnck_utils.stick(window_id_the_int_type)
+            if window_state.is_above:
+                wnck_utils.make_above(window_id_the_int_type)
 
     def _is_same_window(self, window1: XSessionConfigObject, window2: XSessionConfigObject):
         # Deal with JetBrains products. Move the window if they are the same project.
