@@ -419,6 +419,7 @@ class XSessionManager:
                             self._is_same_window(running_window,
                                                  saved_window):
                         if running_window.desktop_number == int(desktop_number):
+                            self.fix_window_state(saved_window_state, running_window.window_id_the_int_type)
                             if not self._suppress_log_if_already_in_workspace:
                                 print('"%s" has already been in Workspace %s' % (running_window.window_title,
                                                                                  desktop_number))
