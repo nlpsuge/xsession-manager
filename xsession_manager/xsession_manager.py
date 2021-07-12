@@ -22,7 +22,7 @@ from .session_filter import SessionFilter
 from .settings.constants import Locations
 from .settings.xsession_config import XSessionConfig, XSessionConfigObject
 from .utils import wmctl_wrapper, subprocess_utils, retry, gio_utils, wnck_utils, snapd_workaround, suppress_output, \
-    string_utils
+    string_utils, glib_utils
 
 
 class XSessionManager:
@@ -46,6 +46,8 @@ class XSessionManager:
         self.opened_window_id_pid_old: Dict[int, List[int]] = {}
         self.opened_window_id_pid_lock = threading.RLock()
         self._windows_can_not_be_moved: List[XSessionConfigObject] = []
+
+        self.loop = glib_utils.MainLoop()
 
     def save_session(self, session_name: str, session_filter: SessionFilter=None):
         x_session_config = self.get_session_details(remove_duplicates_by_pid=False,
@@ -452,9 +454,13 @@ class XSessionManager:
                 is_sticky = wnck_utils.is_sticky(window_id_the_int_type)
                 wnck_utils.move_window_to(window_id_the_int_type, desktop_number)
                 self._moved_windowids_cache.append(running_window_id)
-                self.fix_window_state(saved_window_state, window_id_the_int_type)
-                if not wnck_utils.is_sticky(window_id_the_int_type) and is_sticky:
-                    wnck_utils.stick(window_id_the_int_type)
+
+                def fix_window_state(window_changed, change_mask, new_state):
+                    self.fix_window_state(saved_window_state, window_id_the_int_type)
+                    if not wnck_utils.is_sticky(window_id_the_int_type) and is_sticky:
+                        wnck_utils.stick(window_id_the_int_type)
+
+                wnck_utils.get_window(window_id_the_int_type).connect('state-changed', fix_window_state)
                 # Wait some time to prevent 'X Error of failed request:  BadWindow (invalid Window parameter)'
                 # sleep(0.25)
         except retry.NeedRetryException as ne:
