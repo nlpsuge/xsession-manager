@@ -451,6 +451,8 @@ class XSessionManager:
                 # wmctl_wrapper.move_window_to(running_window_id, str(desktop_number))
                 is_sticky = wnck_utils.is_sticky(window_id_the_int_type)
                 wnck_utils.move_window_to(window_id_the_int_type, desktop_number)
+                # Wait some time for processing event completely, no guarantee though
+                sleep(0.25)
                 self._moved_windowids_cache.append(running_window_id)
                 self.fix_window_state(saved_window_state, window_id_the_int_type)
                 if not wnck_utils.is_sticky(window_id_the_int_type) and is_sticky:
