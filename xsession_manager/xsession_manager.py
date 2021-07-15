@@ -371,7 +371,10 @@ class XSessionManager:
     def _move_window(self, saved_window: XSessionConfigObject, pid: int = None, need_retry=True):
         try:
             desktop_number = saved_window.desktop_number
-            saved_window_state = saved_window.window_state
+            if hasattr(saved_window, 'window_state'):
+                saved_window_state = saved_window.window_state
+            else:
+                saved_window_state = None
 
             pids = []
             if pid:
