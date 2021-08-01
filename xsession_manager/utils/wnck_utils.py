@@ -27,7 +27,8 @@ def move_window_to(window_id, desktop_number):
         print('Workspace %d not found!' % desktop_number)
     else:
         window: Wnck.Window = get_window(window_id)
-        window.move_to_workspace(ws)
+        if window:
+            window.move_to_workspace(ws)
 
 
 def is_gnome() -> bool:
@@ -73,17 +74,20 @@ def get_window_title(xid: int) -> str:
 
 def is_sticky(xid: int) -> bool:
     window: Wnck.Window = get_window(xid)
+    if not window:
+        return False
     return window.is_sticky()
 
 
 def stick(xid: int, if_not_sticky: bool=True):
     window: Wnck.Window = get_window(xid)
-    if if_not_sticky:
+    if if_not_sticky and window:
         _is_sticky = window.is_sticky()
         if not _is_sticky:
             window.stick()
     else:
-        window.stick()
+        if window:
+            window.stick()
 
 
 def is_above(xid: int) -> bool:
