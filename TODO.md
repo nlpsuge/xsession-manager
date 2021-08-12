@@ -7,7 +7,7 @@ Note that this to-do list may not cover all cases.
 - [ ] Store settings in a kind of DB? No need for now, I think
 - [x] Save a session (-a/--save)
 - [x] Restore a session (-r/--restore)
-  - [ ] Restore window sizes and positions (geometry) (See: https://github.com/nlpsuge/xsession-manager/issues/23)
+  - [x] Restore window sizes and positions (geometry) (See: https://github.com/nlpsuge/xsession-manager/issues/23)
 - [x] Close a session (-c/--close-all)
   - [x] Close selected apps (Split --close-all to --close [all|select]?)
 - [x] Add -x/--exclude option:
