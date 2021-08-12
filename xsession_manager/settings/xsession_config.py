@@ -20,6 +20,7 @@ class XSessionConfigObject(Base):
         is_above: bool
 
     class WindowPosition(Base):
+        provider: str
         x_offset: int
         y_offset: int
         width: int
@@ -50,12 +51,6 @@ class XSessionConfigObject(Base):
             config.window_id_the_int_type = int(window[0], 16)
             config.desktop_number = int(window[1])
             config.pid = int(window[2])
-            window_position = config.WindowPosition()
-            window_position.x_offset = int(window[3])
-            window_position.y_offset = int(window[4])
-            window_position.width = int(window[5])
-            window_position.height = int(window[6])
-            config.window_position = window_position
             config.client_machine_name = window[7]
             # The title will be empty in some case.
             # For instance:
