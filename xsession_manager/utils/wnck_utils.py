@@ -128,6 +128,17 @@ def get_geometry(xid: int) -> (int, int, int, int):
 def set_geometry(xid: int, xp: int, yp: int, widthp: int, heightp: int):
     window = get_window(xid)
     if window:
+        _if_set_geometry = True
+
+        geometry = get_geometry(xid)
+        if geometry:
+            x_offset, y_offset, width, height = geometry
+            if xp == x_offset and yp == y_offset and width == widthp and height == heightp:
+                _if_set_geometry = False
+
+        if _if_set_geometry is False:
+            return
+
         geometry_mask: Wnck.WindowMoveResizeMask = (
                 Wnck.WindowMoveResizeMask.X |
                 Wnck.WindowMoveResizeMask.Y |
