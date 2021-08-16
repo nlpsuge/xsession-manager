@@ -110,3 +110,38 @@ def count_windows(xid: int) -> int:
 
     app: Wnck.Application = window.get_application()
     return app.get_n_windows()
+
+
+def get_geometry(xid: int) -> (int, int, int, int):
+    window = get_window(xid)
+    if window:
+        geometry = window.get_geometry()
+        xp = geometry.xp
+        yp = geometry.yp
+        widthp = geometry.widthp
+        heightp = geometry.heightp
+        return xp, yp, widthp, heightp
+
+    return None
+
+
+def set_geometry(xid: int, xp: int, yp: int, widthp: int, heightp: int):
+    window = get_window(xid)
+    if window:
+        _if_set_geometry = True
+
+        geometry = get_geometry(xid)
+        if geometry:
+            x_offset, y_offset, width, height = geometry
+            if xp == x_offset and yp == y_offset and width == widthp and height == heightp:
+                _if_set_geometry = False
+
+        if _if_set_geometry is False:
+            return
+
+        geometry_mask: Wnck.WindowMoveResizeMask = (
+                Wnck.WindowMoveResizeMask.X |
+                Wnck.WindowMoveResizeMask.Y |
+                Wnck.WindowMoveResizeMask.WIDTH |
+                Wnck.WindowMoveResizeMask.HEIGHT)
+        window.set_geometry(Wnck.WindowGravity.CURRENT, geometry_mask, xp, yp, widthp, heightp)

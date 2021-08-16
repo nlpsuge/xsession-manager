@@ -46,6 +46,8 @@ class XSessionManager:
         self.opened_window_id_pid_old: Dict[int, List[int]] = {}
         self.opened_window_id_pid_lock = threading.RLock()
         self._windows_can_not_be_moved: List[XSessionConfigObject] = []
+        self._if_restore_geometry = False
+        self.silence = False
 
     def save_session(self, session_name: str, session_filter: SessionFilter=None):
         x_session_config = self.get_session_details(remove_duplicates_by_pid=False,
@@ -84,7 +86,8 @@ class XSessionManager:
         running_windows: list = wmctl_wrapper.get_running_windows()
         x_session_config: XSessionConfig = XSessionConfigObject.convert_wmctl_result_2_list(running_windows,
                                                                                             remove_duplicates_by_pid)
-        print('Got the process list according to wmctl: %s' % json.dumps(x_session_config, default=lambda o: o.__dict__))
+        if self.silence is False:
+            print('Got the process list according to wmctl: %s' % json.dumps(x_session_config, default=lambda o: o.__dict__))
         x_session_config_objects: List[XSessionConfigObject] = x_session_config.x_session_config_objects
         for idx, sd in enumerate(x_session_config_objects):
             try:
@@ -97,6 +100,20 @@ class XSessionManager:
                 sd.window_state = sd.WindowState()
                 sd.window_state.is_above = wnck_utils.is_above(sd.window_id_the_int_type)
                 sd.window_state.is_sticky = wnck_utils.is_sticky(sd.window_id_the_int_type)
+
+                geometry = wnck_utils.get_geometry(sd.window_id_the_int_type)
+                if geometry is None:
+                    sleep(0.25)
+                    geometry = wnck_utils.get_geometry(sd.window_id_the_int_type)
+                if geometry:
+                    x_offset, y_offset, width, height = geometry
+                    window_position = sd.WindowPosition()
+                    window_position.x_offset = x_offset
+                    window_position.y_offset = y_offset
+                    window_position.width = width
+                    window_position.height = height
+                    window_position.provider = 'Wnck'
+                    sd.window_position = window_position
             except psutil.NoSuchProcess as e:
                 print('Failed to get process [%s] info using psutil due to: %s' % (sd, str(e)))
                 sd.app_name = ''
@@ -110,8 +127,9 @@ class XSessionManager:
                 x_session_config.x_session_config_objects[:] = \
                     session_filter(x_session_config.x_session_config_objects)
 
-        print('Complete the process list according to psutil: %s' %
-              json.dumps(x_session_config, default=lambda o: o.__dict__))
+        if self.silence is False:
+            print('Complete the process list according to psutil: %s' %
+                  json.dumps(x_session_config, default=lambda o: o.__dict__))
         return x_session_config
 
     def backup_session(self, original_session_path):
@@ -195,6 +213,7 @@ class XSessionManager:
                           restoring_interval,
                           _x_session_config_objects_copy: List[XSessionConfigObject]):
         self._suppress_log_if_already_in_workspace = True
+        self._if_restore_geometry = True
 
         failed_restores = []
         succeeded_restores = []
@@ -422,6 +441,7 @@ class XSessionManager:
                             self._is_same_window(running_window,
                                                  saved_window):
                         if running_window.desktop_number == int(desktop_number):
+                            self._restore_geometry(saved_window)
                             self.fix_window_state(saved_window_state, running_window.window_id_the_int_type)
                             if not self._suppress_log_if_already_in_workspace:
                                 print('"%s" has already been in Workspace %s' % (running_window.window_title,
@@ -445,6 +465,7 @@ class XSessionManager:
                 running_window_id = running_window.window_id
                 window_id_the_int_type = running_window.window_id_the_int_type
                 if running_window_id in self._moved_windowids_cache:
+                    self._restore_geometry(saved_window)
                     self.fix_window_state(saved_window_state, window_id_the_int_type)
                     continue
                 window_title = running_window.window_title
@@ -456,17 +477,37 @@ class XSessionManager:
                 wnck_utils.move_window_to(window_id_the_int_type, desktop_number)
                 # Wait some time for processing event completely, no guarantee though
                 sleep(0.25)
+
                 self._moved_windowids_cache.append(running_window_id)
                 self.fix_window_state(saved_window_state, window_id_the_int_type)
                 if not wnck_utils.is_sticky(window_id_the_int_type) and is_sticky:
                     wnck_utils.stick(window_id_the_int_type)
-                # Wait some time to prevent 'X Error of failed request:  BadWindow (invalid Window parameter)'
-                # sleep(0.25)
+
+                self._restore_geometry(saved_window)
+
         except retry.NeedRetryException as ne:
             raise ne
         except Exception as e:
             import traceback
             print(traceback.format_exc())
+
+    def _restore_geometry(self, x_session_config_object: XSessionConfigObject):
+        if self._if_restore_geometry is False:
+            return
+
+        window_position = x_session_config_object.window_position
+        if hasattr(window_position, 'provider'):
+            provider = window_position.provider
+            if provider == 'Wnck':
+                x_offset = window_position.x_offset
+                y_offset = window_position.y_offset
+                width = window_position.width
+                height = window_position.height
+                wnck_utils.set_geometry(x_session_config_object.window_id_the_int_type,
+                                        x_offset,
+                                        y_offset,
+                                        width,
+                                        height)
 
     def fix_window_state(self,
                          window_state: XSessionConfigObject.WindowState,
