@@ -496,17 +496,18 @@ class XSessionManager:
             return
 
         window_position = x_session_config_object.window_position
-        provider = window_position.provider
-        if provider == 'Wnck':
-            x_offset = window_position.x_offset
-            y_offset = window_position.y_offset
-            width = window_position.width
-            height = window_position.height
-            wnck_utils.set_geometry(x_session_config_object.window_id_the_int_type,
-                                    x_offset,
-                                    y_offset,
-                                    width,
-                                    height)
+        if hasattr(window_position, 'provider'):
+            provider = window_position.provider
+            if provider == 'Wnck':
+                x_offset = window_position.x_offset
+                y_offset = window_position.y_offset
+                width = window_position.width
+                height = window_position.height
+                wnck_utils.set_geometry(x_session_config_object.window_id_the_int_type,
+                                        x_offset,
+                                        y_offset,
+                                        width,
+                                        height)
 
     def fix_window_state(self,
                          window_state: XSessionConfigObject.WindowState,
