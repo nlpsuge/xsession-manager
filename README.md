@@ -97,6 +97,17 @@ xsm -pr
 ```
 Then put this file into ```~/.config/autostart```.
 
+For example:
+```
+[Desktop Entry]
+Name=Auto Restore saved X Windows
+Comment=
+Icon=
+Exec=xsm -pr
+Terminal=false
+Type=Application
+X-GNOME-Autostart-Delay=20
+```
 
 ***NOTE: You can also use ```xsession-manager``` instead of ```xsm```.***
 
