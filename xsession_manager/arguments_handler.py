@@ -40,6 +40,10 @@ def check_and_reset_args(args: Namespace):
             and ('-pr' in argv):
         args.pr = Locations.DEFAULT_SESSION_NAME
         pop_up_a_dialog_to_restore = args.pr
+    if string_utils.empty_string(detail) \
+            and ('-t' in argv or '--detail' in argv):
+        args.detail = Locations.DEFAULT_SESSION_NAME
+        detail = args.detail
     if string_utils.empty_string(move_automatically) \
             and ('-ma' in argv or '--move-automatically' in argv):
         args.move_automatically = Locations.DEFAULT_SESSION_NAME
@@ -153,9 +157,10 @@ def handle_arguments(args: Namespace):
 
     if session_details:
         session_path = Path(constants.Locations.BASE_LOCATION_OF_SESSIONS, session_details)
-        print('Look for session located [%s] ' % session_path)
+        print('Looking for session located [%s] ' % session_path)
         if not session_path.exists():
-            raise FileNotFoundError('Session file [%s] was not found.' % session_path)
+            print('[%s] not found.' % session_path)
+            return
 
         print()
         count = 0
@@ -193,7 +198,9 @@ def handle_arguments(args: Namespace):
                             print('%s: %s' % (ordered_key.replace('_', ' '),
                                               ''.join('\n    ' + str(v) for v in values_to_be_printed)))
                         elif type(value) is list:
-                            print('%s: %s' % (ordered_key.replace('_', ' '), ' '.join(value)))
+                            # Such as 'notepad-plus-plus.exe' via Snap has many empty strings in its cmdline
+                            empty_slots_removed_str = ' '.join(ele for ele in value if ele != '')
+                            print('%s: %s' % (ordered_key.replace('_', ' '), empty_slots_removed_str))
                         else:
                             print('%s: %s' % (ordered_key.replace('_', ' '), value))
                 print()
