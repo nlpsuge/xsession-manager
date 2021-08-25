@@ -40,6 +40,10 @@ def check_and_reset_args(args: Namespace):
             and ('-pr' in argv):
         args.pr = Locations.DEFAULT_SESSION_NAME
         pop_up_a_dialog_to_restore = args.pr
+    if string_utils.empty_string(detail) \
+            and ('-t' in argv or '--detail' in argv):
+        args.detail = Locations.DEFAULT_SESSION_NAME
+        detail = args.detail
     if string_utils.empty_string(move_automatically) \
             and ('-ma' in argv or '--move-automatically' in argv):
         args.move_automatically = Locations.DEFAULT_SESSION_NAME
@@ -153,9 +157,10 @@ def handle_arguments(args: Namespace):
 
     if session_details:
         session_path = Path(constants.Locations.BASE_LOCATION_OF_SESSIONS, session_details)
-        print('Look for session located [%s] ' % session_path)
+        print('Looking for session located [%s] ' % session_path)
         if not session_path.exists():
-            raise FileNotFoundError('Session file [%s] was not found.' % session_path)
+            print('[%s] not found.' % session_path)
+            return
 
         print()
         count = 0

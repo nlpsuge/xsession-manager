@@ -33,7 +33,9 @@ class ArgumentsParser:
                             help='Pop up a dialog to ask user whether to restore a X session.')
 
         parser.add_argument('-l', '--list', action='store_true', help='List the sessions.')
-        parser.add_argument('-t', '--detail', help='Check out the details of a session.')
+        parser.add_argument('-t', '--detail',
+                            nargs='?',
+                            help='Check out the details of a session.')
 
         # -x [<window_id>|<pid>|<app_name> or <title_name>]
         parser.add_argument('-x', '--exclude',
