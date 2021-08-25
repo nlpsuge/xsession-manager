@@ -198,7 +198,9 @@ def handle_arguments(args: Namespace):
                             print('%s: %s' % (ordered_key.replace('_', ' '),
                                               ''.join('\n    ' + str(v) for v in values_to_be_printed)))
                         elif type(value) is list:
-                            print('%s: %s' % (ordered_key.replace('_', ' '), ' '.join(value)))
+                            # Such as 'notepad-plus-plus.exe' via Snap has many empty strings in its cmdline
+                            empty_slots_removed_str = ' '.join(ele for ele in value if ele != '')
+                            print('%s: %s' % (ordered_key.replace('_', ' '), empty_slots_removed_str))
                         else:
                             print('%s: %s' % (ordered_key.replace('_', ' '), value))
                 print()
