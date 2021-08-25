@@ -54,6 +54,9 @@ def get_app_name(xid: int) -> str:
     if name == 'Wine':  # eg: https://snapcraft.io/notepad-plus-plus
         # Return a reasonable name
         return window.get_class_instance_name()
+    # Fix: gnome-extensions has empty value of window.get_class_group_name()
+    if name == '' or name is None:
+        return window.get_application().get_name()
     return name
 
 
