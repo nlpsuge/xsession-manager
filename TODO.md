@@ -1,6 +1,7 @@
 Note that this to-do list may not cover all cases.
 
 - [ ] Support WINE-based applications
+  - [x] Supported Wine apps installed via Snap
 - [x] Support Snap applications
 - [ ] Avoid saving system's applications
 - [x] Store settings in the json format file
@@ -35,7 +36,7 @@ Note that this to-do list may not cover all cases.
 - [x] Move windows to the workspace that they belong in last time 
   - [x] When restoring session.
   - [x] By using '-ma/--move-automatically'
-  - [ ] Create enough workspaces before moving
+  - [x] Create enough workspaces before moving
     - [x] Support gnome via `gsettings`
 - [x] Update requirements.txt
   - [x] python3-gobject is missing? No.
