@@ -40,3 +40,4 @@ Note that this to-do list may not cover all cases.
     - [x] Support gnome via `gsettings`
 - [x] Update requirements.txt
   - [x] python3-gobject is missing? No.
+- [ ] Move Windows from one monitor to another automatically
