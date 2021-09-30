@@ -148,3 +148,9 @@ def set_geometry(xid: int, xp: int, yp: int, widthp: int, heightp: int):
                 Wnck.WindowMoveResizeMask.WIDTH |
                 Wnck.WindowMoveResizeMask.HEIGHT)
         window.set_geometry(Wnck.WindowGravity.CURRENT, geometry_mask, xp, yp, widthp, heightp)
+
+
+def focus_window(xid: int):
+    window = get_window(xid)
+    if window:
+        window.activate(time())

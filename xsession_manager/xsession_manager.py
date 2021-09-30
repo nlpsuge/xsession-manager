@@ -18,6 +18,7 @@ from typing import List, Dict, Any, Union
 
 import psutil
 
+from .settings.rules import Rules
 from .session_filter import SessionFilter
 from .settings.constants import Locations
 from .settings.xsession_config import XSessionConfig, XSessionConfigObject
@@ -114,6 +115,8 @@ class XSessionManager:
                     window_position.height = height
                     window_position.provider = 'Wnck'
                     sd.window_position = window_position
+
+                    # sd.workspace_state =
             except psutil.NoSuchProcess as e:
                 print('Failed to get process [%s] info using psutil due to: %s' % (sd, str(e)))
                 sd.app_name = ''
@@ -326,11 +329,15 @@ class XSessionManager:
                     # Close one application's windows one by one from the last one
                     for session in a_process_with_many_windows:
                         print('Closing %s(%s %s).' % (session.app_name, session.window_id, session.pid))
-                        wnck_utils.close_window_gracefully_async(session.window_id_the_int_type)
+                        Rules(session).apply_rules_if_needed(Rules.OperateType.CLOSE,
+                                                             wnck_utils.close_window_gracefully_async,
+                                                             (session.window_id_the_int_type, ))
             else:
                 session = a_process_with_many_windows[0]
                 print('Closing %s(%s %s).' % (session.app_name, session.window_id, session.pid))
-                wnck_utils.close_window_gracefully_async(session.window_id_the_int_type)
+                Rules(session).apply_rules_if_needed(Rules.OperateType.CLOSE,
+                                                     wnck_utils.close_window_gracefully_async,
+                                                     (session.window_id_the_int_type, ))
 
             # Wait some time, in case of freezing the entire system
             sleep(0.25)

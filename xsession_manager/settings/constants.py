@@ -13,6 +13,8 @@ class Prompts:
 class Locations:
     USER_HOME = str(expanduser('~'))
 
+    # session configs
+
     BASE_LOCATION_OF_SESSIONS = Path(USER_HOME, '.config', 'xsession-manager', 'sessions')
 
     BASE_LOCATION_OF_BACKUP_SESSIONS = Path(USER_HOME, '.config', 'xsession-manager', 'sessions', 'backups')
@@ -20,7 +22,13 @@ class Locations:
     DEFAULT_SESSION_NAME = 'xsession-default'
 
     # Save the current x session to xsession-default
-    LOCATION_OF_DEFAULT_SESSION = Path(BASE_LOCATION_OF_SESSIONS, 'xsession-default')
+    LOCATION_OF_DEFAULT_SESSION = Path(BASE_LOCATION_OF_SESSIONS, DEFAULT_SESSION_NAME)
+
+    # rule configs
+
+    BASE_RULE_CONFIGS_PATH = Path(USER_HOME, '.config', 'xsession-manager', 'rule')
+    RULE_CONFIGS_NAME = 'rule-configs.json'
+    RULE_CONFIGS_PATH = Path(BASE_RULE_CONFIGS_PATH, RULE_CONFIGS_NAME)
 
 
 class GSettings(Enum):
