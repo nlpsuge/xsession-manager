@@ -1,5 +1,6 @@
 import argparse
 import sys
+from .version import __version__
 
 
 class ArgumentsParser:
@@ -56,6 +57,10 @@ class ArgumentsParser:
                             nargs='?',
                             help='Auto move windows to specified workspaces according to a saved session. '
                                  'The default session is `xsession-default`')
+
+        parser.add_argument('-v', '--version',
+                            action='version',
+                            version=__version__)
 
         if len(sys.argv) == 1:
             print('No arguments provided.\n')
