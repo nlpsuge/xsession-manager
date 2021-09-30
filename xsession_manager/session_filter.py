@@ -16,7 +16,7 @@ def filter_session(session, includes):
             return True
 
         if include.lower() in session.app_name.lower() \
-                or include in session.window_title.lower():
+                or include.lower() in session.window_title.lower():
             return True
 
 
