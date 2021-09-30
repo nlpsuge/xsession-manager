@@ -46,6 +46,8 @@ class XSessionManager:
         self.opened_window_id_pid_old: Dict[int, List[int]] = {}
         self.opened_window_id_pid_lock = threading.RLock()
         self._windows_can_not_be_moved: List[XSessionConfigObject] = []
+        self._if_restore_geometry = False
+        self.silence = False
 
     def save_session(self, session_name: str, session_filter: SessionFilter=None):
         x_session_config = self.get_session_details(remove_duplicates_by_pid=False,
@@ -84,7 +86,8 @@ class XSessionManager:
         running_windows: list = wmctl_wrapper.get_running_windows()
         x_session_config: XSessionConfig = XSessionConfigObject.convert_wmctl_result_2_list(running_windows,
                                                                                             remove_duplicates_by_pid)
-        print('Got the process list according to wmctl: %s' % json.dumps(x_session_config, default=lambda o: o.__dict__))
+        if self.silence is False:
+            print('Got the process list according to wmctl: %s' % json.dumps(x_session_config, default=lambda o: o.__dict__))
         x_session_config_objects: List[XSessionConfigObject] = x_session_config.x_session_config_objects
         for idx, sd in enumerate(x_session_config_objects):
             try:
@@ -94,6 +97,23 @@ class XSessionManager:
                 sd.process_create_time = datetime.datetime.fromtimestamp(process.create_time()).strftime("%Y-%m-%d %H:%M:%S")
                 sd.cpu_percent = process.cpu_percent()
                 sd.memory_percent = process.memory_percent()
+                sd.window_state = sd.WindowState()
+                sd.window_state.is_above = wnck_utils.is_above(sd.window_id_the_int_type)
+                sd.window_state.is_sticky = wnck_utils.is_sticky(sd.window_id_the_int_type)
+
+                geometry = wnck_utils.get_geometry(sd.window_id_the_int_type)
+                if geometry is None:
+                    sleep(0.25)
+                    geometry = wnck_utils.get_geometry(sd.window_id_the_int_type)
+                if geometry:
+                    x_offset, y_offset, width, height = geometry
+                    window_position = sd.WindowPosition()
+                    window_position.x_offset = x_offset
+                    window_position.y_offset = y_offset
+                    window_position.width = width
+                    window_position.height = height
+                    window_position.provider = 'Wnck'
+                    sd.window_position = window_position
             except psutil.NoSuchProcess as e:
                 print('Failed to get process [%s] info using psutil due to: %s' % (sd, str(e)))
                 sd.app_name = ''
@@ -107,8 +127,9 @@ class XSessionManager:
                 x_session_config.x_session_config_objects[:] = \
                     session_filter(x_session_config.x_session_config_objects)
 
-        print('Complete the process list according to psutil: %s' %
-              json.dumps(x_session_config, default=lambda o: o.__dict__))
+        if self.silence is False:
+            print('Complete the process list according to psutil: %s' %
+                  json.dumps(x_session_config, default=lambda o: o.__dict__))
         return x_session_config
 
     def backup_session(self, original_session_path):
@@ -192,6 +213,7 @@ class XSessionManager:
                           restoring_interval,
                           _x_session_config_objects_copy: List[XSessionConfigObject]):
         self._suppress_log_if_already_in_workspace = True
+        self._if_restore_geometry = True
 
         failed_restores = []
         succeeded_restores = []
@@ -365,9 +387,13 @@ class XSessionManager:
         self._moving_windows_pool.apply_async(
             retry.Retry(6, 1).do_retry(self._move_window, (namespace_obj, pid)))
 
-    def _move_window(self, namespace_obj: XSessionConfigObject, pid: int = None, need_retry=True):
+    def _move_window(self, saved_window: XSessionConfigObject, pid: int = None, need_retry=True):
         try:
-            desktop_number = namespace_obj.desktop_number
+            desktop_number = saved_window.desktop_number
+            if hasattr(saved_window, 'window_state'):
+                saved_window_state = saved_window.window_state
+            else:
+                saved_window_state = None
 
             pids = []
             if pid:
@@ -376,7 +402,7 @@ class XSessionManager:
 
             # Get process info according to command line
             if len(pids) == 0:
-                cmd = namespace_obj.cmd
+                cmd = saved_window.cmd
                 if len(cmd) <= 0:
                     return
 
@@ -389,7 +415,7 @@ class XSessionManager:
                         # break
 
             if len(pids) == 0:
-                self._windows_can_not_be_moved.append(namespace_obj)
+                self._windows_can_not_be_moved.append(saved_window)
                 return
 
             no_need_to_move = True
@@ -411,9 +437,12 @@ class XSessionManager:
             for running_window in x_session_config_objects:
                 if running_window.pid in pids:
                     no_need_to_compare_title = (counter[running_window.pid] == 1)
-                    if no_need_to_compare_title or self._is_same_window(running_window,
-                                                                        namespace_obj):
+                    if no_need_to_compare_title or\
+                            self._is_same_window(running_window,
+                                                 saved_window):
                         if running_window.desktop_number == int(desktop_number):
+                            self._restore_geometry(saved_window)
+                            self.fix_window_state(saved_window_state, running_window.window_id_the_int_type)
                             if not self._suppress_log_if_already_in_workspace:
                                 print('"%s" has already been in Workspace %s' % (running_window.window_title,
                                                                                  desktop_number))
@@ -428,28 +457,66 @@ class XSessionManager:
                     no_need_to_move = False
 
             if need_retry and len(moving_windows) == 0:
-                raise retry.NeedRetryException(namespace_obj)
+                raise retry.NeedRetryException(saved_window)
             elif no_need_to_move:
                 return
 
             for running_window in moving_windows:
                 running_window_id = running_window.window_id
+                window_id_the_int_type = running_window.window_id_the_int_type
                 if running_window_id in self._moved_windowids_cache:
+                    self._restore_geometry(saved_window)
+                    self.fix_window_state(saved_window_state, window_id_the_int_type)
                     continue
                 window_title = running_window.window_title
                 if string_utils.empty_string(window_title):
-                    window_title = wnck_utils.get_app_name(running_window.window_id_the_int_type)
+                    window_title = wnck_utils.get_app_name(window_id_the_int_type)
                 print('Moving window to desktop:           [%s : %s]' % (window_title, desktop_number))
                 # wmctl_wrapper.move_window_to(running_window_id, str(desktop_number))
-                wnck_utils.move_window_to(running_window.window_id_the_int_type, desktop_number)
+                is_sticky = wnck_utils.is_sticky(window_id_the_int_type)
+                wnck_utils.move_window_to(window_id_the_int_type, desktop_number)
+                # Wait some time for processing event completely, no guarantee though
+                sleep(0.25)
+
                 self._moved_windowids_cache.append(running_window_id)
-                # Wait some time to prevent 'X Error of failed request:  BadWindow (invalid Window parameter)'
-                # sleep(0.25)
+                self.fix_window_state(saved_window_state, window_id_the_int_type)
+                if not wnck_utils.is_sticky(window_id_the_int_type) and is_sticky:
+                    wnck_utils.stick(window_id_the_int_type)
+
+                self._restore_geometry(saved_window)
+
         except retry.NeedRetryException as ne:
             raise ne
         except Exception as e:
             import traceback
             print(traceback.format_exc())
+
+    def _restore_geometry(self, x_session_config_object: XSessionConfigObject):
+        if self._if_restore_geometry is False:
+            return
+
+        window_position = x_session_config_object.window_position
+        if hasattr(window_position, 'provider'):
+            provider = window_position.provider
+            if provider == 'Wnck':
+                x_offset = window_position.x_offset
+                y_offset = window_position.y_offset
+                width = window_position.width
+                height = window_position.height
+                wnck_utils.set_geometry(x_session_config_object.window_id_the_int_type,
+                                        x_offset,
+                                        y_offset,
+                                        width,
+                                        height)
+
+    def fix_window_state(self,
+                         window_state: XSessionConfigObject.WindowState,
+                         window_id_the_int_type: int):
+        if window_state:
+            if window_state.is_sticky:
+                wnck_utils.stick(window_id_the_int_type)
+            if window_state.is_above:
+                wnck_utils.make_above(window_id_the_int_type)
 
     def _is_same_window(self, window1: XSessionConfigObject, window2: XSessionConfigObject):
         # Deal with JetBrains products. Move the window if they are the same project.

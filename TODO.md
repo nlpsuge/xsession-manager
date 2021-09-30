@@ -1,13 +1,14 @@
 Note that this to-do list may not cover all cases.
 
 - [ ] Support WINE-based applications
+  - [x] Supported Wine apps installed via Snap
 - [x] Support Snap applications
 - [ ] Avoid saving system's applications
 - [x] Store settings in the json format file
 - [ ] Store settings in a kind of DB? No need for now, I think
 - [x] Save a session (-a/--save)
 - [x] Restore a session (-r/--restore)
-  - [ ] Restore window sizes and positions (geometry) (See: https://github.com/nlpsuge/xsession-manager/issues/23)
+  - [x] Restore window sizes and positions (geometry) (See: https://github.com/nlpsuge/xsession-manager/issues/23)
 - [x] Close a session (-c/--close-all)
   - [x] Close selected apps (Split --close-all to --close [all|select]?)
 - [x] Add -x/--exclude option:
@@ -35,7 +36,8 @@ Note that this to-do list may not cover all cases.
 - [x] Move windows to the workspace that they belong in last time 
   - [x] When restoring session.
   - [x] By using '-ma/--move-automatically'
-  - [ ] Create enough workspaces before moving
+  - [x] Create enough workspaces before moving
     - [x] Support gnome via `gsettings`
 - [x] Update requirements.txt
   - [x] python3-gobject is missing? No.
+- [ ] Move Windows from one monitor to another automatically

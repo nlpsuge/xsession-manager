@@ -40,6 +40,10 @@ def check_and_reset_args(args: Namespace):
             and ('-pr' in argv):
         args.pr = Locations.DEFAULT_SESSION_NAME
         pop_up_a_dialog_to_restore = args.pr
+    if string_utils.empty_string(detail) \
+            and ('-t' in argv or '--detail' in argv):
+        args.detail = Locations.DEFAULT_SESSION_NAME
+        detail = args.detail
     if string_utils.empty_string(move_automatically) \
             and ('-ma' in argv or '--move-automatically' in argv):
         args.move_automatically = Locations.DEFAULT_SESSION_NAME
@@ -153,9 +157,10 @@ def handle_arguments(args: Namespace):
 
     if session_details:
         session_path = Path(constants.Locations.BASE_LOCATION_OF_SESSIONS, session_details)
-        print('Look for session located [%s] ' % session_path)
+        print('Looking for session located [%s] ' % session_path)
         if not session_path.exists():
-            raise FileNotFoundError('Session file [%s] was not found.' % session_path)
+            print('[%s] not found.' % session_path)
+            return
 
         print()
         count = 0
@@ -170,7 +175,11 @@ def handle_arguments(args: Namespace):
             ordered_variables = vars(XSessionConfigObject)['__annotations__']
             for x_session_config_object in x_session_config_objects:
                 count = count + 1
-                print('  %d.' % count)
+                print('%d.' % count)
+
+                # Get fields in declared order
+                x_session_config_object_annotations = vars(XSessionConfigObject)['__annotations__']
+
                 vars_in_x_session_config_object = vars(x_session_config_object)
                 keys_in_x_session_config_object = vars_in_x_session_config_object.keys()
                 for ordered_key in ordered_variables.keys():
@@ -178,22 +187,25 @@ def handle_arguments(args: Namespace):
                         value = vars_in_x_session_config_object[ordered_key]
                         if type(value) is Namespace:
                             # Print data according to declared order
-                            _ordered_variables = vars(XSessionConfigObject.WindowPosition)['__annotations__']
-                            position_info = vars(value)
-                            position_values = []
+                            _ordered_variables = \
+                                vars(x_session_config_object_annotations[ordered_key])['__annotations__']
+                            values = vars(value)
+                            values_to_be_printed = []
                             for _ordered_key in _ordered_variables.keys():
-                                position_values.append(position_info[_ordered_key])
-                            print('  %s: %s' % (ordered_key.replace('_', ' '), ' '.join(str(v) for v in position_values)))
+                                if _ordered_key in values.keys():
+                                    values_to_be_printed.append(_ordered_key.replace('_', ' ') + ": " +
+                                                                str(values[_ordered_key]))
+                            print('%s: %s' % (ordered_key.replace('_', ' '),
+                                              ''.join('\n    ' + str(v) for v in values_to_be_printed)))
                         elif type(value) is list:
-                            print('  %s: %s' % (ordered_key.replace('_', ' '), ' '.join(value)))
+                            # Such as 'notepad-plus-plus.exe' via Snap has many empty strings in its cmdline
+                            empty_slots_removed_str = ' '.join(ele for ele in value if ele != '')
+                            print('%s: %s' % (ordered_key.replace('_', ' '), empty_slots_removed_str))
                         else:
-                            print('  %s: %s' % (ordered_key.replace('_', ' '), value))
+                            print('%s: %s' % (ordered_key.replace('_', ' '), value))
                 print()
 
     if move_automatically:
         xsm = XSessionManager([IncludeSessionFilter(include),
                                ExcludeSessionFilter(exclude)])
         xsm.move_window(move_automatically)
-
-
-

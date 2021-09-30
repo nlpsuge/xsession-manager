@@ -28,6 +28,7 @@ python3 setup.py install
 ```Bash
 xsm -s
 ```
+Note: It will save some window states, which include Always on Top and Always on Visible Workspace. These saved states will be used when executing `xsm -r` or `xsm -ma`.
 + Close running windows except those apps with mutiple windows. It's better to leave them to the user to close by hand, some apps like JetBrain's IDEs may have their own session.
 ```Bash
 xsm -c
@@ -97,6 +98,17 @@ xsm -pr
 ```
 Then put this file into ```~/.config/autostart```.
 
+For example:
+```
+[Desktop Entry]
+Name=Auto Restore saved X Windows
+Comment=
+Icon=
+Exec=xsm -pr
+Terminal=false
+Type=Application
+X-GNOME-Autostart-Delay=20
+```
 
 ***NOTE: You can also use ```xsession-manager``` instead of ```xsm```.***
 

@@ -12,7 +12,7 @@ long_description = (here / 'README.md').read_text(encoding='utf-8')
 setup(
     # pip install xsession-manager
     name='xsession-manager',
-    version='1.0.2',
+    version='1.0.5',
     description='A command line to save and restore sessions for X11 desktops like Gnome, with many other features',
     long_description=long_description,
     long_description_content_type='text/markdown',

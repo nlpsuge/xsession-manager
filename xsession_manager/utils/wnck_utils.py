@@ -27,7 +27,8 @@ def move_window_to(window_id, desktop_number):
         print('Workspace %d not found!' % desktop_number)
     else:
         window: Wnck.Window = get_window(window_id)
-        window.move_to_workspace(ws)
+        if window:
+            window.move_to_workspace(ws)
 
 
 def is_gnome() -> bool:
@@ -53,6 +54,9 @@ def get_app_name(xid: int) -> str:
     if name == 'Wine':  # eg: https://snapcraft.io/notepad-plus-plus
         # Return a reasonable name
         return window.get_class_instance_name()
+    # Fix: gnome-extensions has empty value of window.get_class_group_name()
+    if name == '' or name is None:
+        return window.get_application().get_name()
     return name
 
 
@@ -72,10 +76,31 @@ def get_window_title(xid: int) -> str:
 
 
 def is_sticky(xid: int) -> bool:
-    screen: Wnck.Screen = Wnck.Screen.get_default()
-    screen.force_update()
-    window: Wnck.Window = Wnck.Window.get(xid)
+    window: Wnck.Window = get_window(xid)
+    if not window:
+        return False
     return window.is_sticky()
+
+
+def stick(xid: int, if_not_sticky: bool=True):
+    window: Wnck.Window = get_window(xid)
+    if if_not_sticky and window:
+        _is_sticky = window.is_sticky()
+        if not _is_sticky:
+            window.stick()
+    else:
+        if window:
+            window.stick()
+
+
+def is_above(xid: int) -> bool:
+    window: Wnck.Window = get_window(xid)
+    return window.is_above()
+
+
+def make_above(xid: int):
+    window: Wnck.Window = get_window(xid)
+    window.make_above()
 
 
 def count_windows(xid: int) -> int:
@@ -88,3 +113,38 @@ def count_windows(xid: int) -> int:
 
     app: Wnck.Application = window.get_application()
     return app.get_n_windows()
+
+
+def get_geometry(xid: int) -> (int, int, int, int):
+    window = get_window(xid)
+    if window:
+        geometry = window.get_geometry()
+        xp = geometry.xp
+        yp = geometry.yp
+        widthp = geometry.widthp
+        heightp = geometry.heightp
+        return xp, yp, widthp, heightp
+
+    return None
+
+
+def set_geometry(xid: int, xp: int, yp: int, widthp: int, heightp: int):
+    window = get_window(xid)
+    if window:
+        _if_set_geometry = True
+
+        geometry = get_geometry(xid)
+        if geometry:
+            x_offset, y_offset, width, height = geometry
+            if xp == x_offset and yp == y_offset and width == widthp and height == heightp:
+                _if_set_geometry = False
+
+        if _if_set_geometry is False:
+            return
+
+        geometry_mask: Wnck.WindowMoveResizeMask = (
+                Wnck.WindowMoveResizeMask.X |
+                Wnck.WindowMoveResizeMask.Y |
+                Wnck.WindowMoveResizeMask.WIDTH |
+                Wnck.WindowMoveResizeMask.HEIGHT)
+        window.set_geometry(Wnck.WindowGravity.CURRENT, geometry_mask, xp, yp, widthp, heightp)
