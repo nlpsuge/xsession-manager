@@ -113,7 +113,7 @@ def handle_arguments(args: Namespace):
     including_apps_with_multiple_windows = args.including_apps_with_multiple_windows
 
     if session_name_for_saving:
-        print(constants.Prompts.MSG_SAVE)
+        print(constants.Prompts.MSG_SAVE % session_name_for_saving)
         wait_for_answer()
         xsm = XSessionManager()
         xsm.save_session(session_name_for_saving)
@@ -166,9 +166,9 @@ def handle_arguments(args: Namespace):
         count = 0
         with open(session_path, 'r') as file:
             namespace_objs: XSessionConfig = json.load(file, object_hook=lambda d: Namespace(**d))
-            print('session name: %s' % namespace_objs.session_name)
-            print('location: %s' % str(session_path))
-            print('created at: %s' % namespace_objs.session_create_time)
+            print('Session Name: %s' % namespace_objs.session_name)
+            print('Created At: %s' % namespace_objs.session_create_time)
+            print('Location: %s' % str(session_path))
 
             x_session_config_objects: List[XSessionConfigObject] = namespace_objs.x_session_config_objects
             # Print data according to declared order
