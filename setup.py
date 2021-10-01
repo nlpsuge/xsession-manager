@@ -7,12 +7,16 @@ import pathlib
 
 here = pathlib.Path(__file__).parent.resolve()
 
+# Get the version from xsession_manager/version.py without importing the package (inspired by youtube-dl)
+exec(compile(open('xsession_manager/version.py').read(),
+             'xsession_manager/version.py', 'exec'))
+
 long_description = (here / 'README.md').read_text(encoding='utf-8')
 
 setup(
     # pip install xsession-manager
     name='xsession-manager',
-    version='1.0.5',
+    version=__version__,
     description='A command line to save and restore sessions for X11 desktops like Gnome, with many other features',
     long_description=long_description,
     long_description_content_type='text/markdown',
