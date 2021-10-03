@@ -30,6 +30,7 @@ class XSessionConfigObject(Base):
     window_id_the_int_type: int
     desktop_number: int
     pid: int
+    username: str
     window_position: WindowPosition
     client_machine_name: str
     window_title: str
