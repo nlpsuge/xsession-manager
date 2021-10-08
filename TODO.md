@@ -42,3 +42,5 @@ Note that this to-do list may not cover all cases.
   - [x] python3-gobject is missing? No.
 - [ ] Move Windows from one monitor to another automatically
 - [x] Support display version via -v/--version
+- [ ] Add an option to allow root user to run this tool?
+    - [ ] Add --allow-root
