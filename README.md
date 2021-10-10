@@ -19,13 +19,13 @@ dnf install python3-devel python3-tkinter wmctrl
 pip3 install xsession-manager
 ```
 ### Install xsession-manager via source code
-#### Install using pip. 
+#### Method-1: Using pip. 
 This method install xsession-manager in `~/.local/lib/python3.9/site-packages` if you are a normal user, in `/usr/local/lib/python3.9/site-packages` if you are root.
 ```Bash
 cd the_root_of_source_code
 pip install .
 ```
-#### Install using setup.py
+#### Method-2: Using setup.py
 This method install xsession-manager in `/usr/local/lib/python3.9/site-packages`.
 ```Bash
 cd the_root_of_source_code
