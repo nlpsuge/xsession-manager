@@ -1,6 +1,8 @@
 # Note: Wnck may not works in Wayland
-
+from contextlib import contextmanager
 from time import time
+
+from . import gio_utils
 
 import gi
 
@@ -148,3 +150,35 @@ def set_geometry(xid: int, xp: int, yp: int, widthp: int, heightp: int):
                 Wnck.WindowMoveResizeMask.WIDTH |
                 Wnck.WindowMoveResizeMask.HEIGHT)
         window.set_geometry(Wnck.WindowGravity.CURRENT, geometry_mask, xp, yp, widthp, heightp)
+
+
+@contextmanager
+def create_enough_workspaces(max_desktop_number: int):
+    """
+    Create enough workspaces
+    """
+    if is_gnome():
+        workspace_count = get_workspace_count()
+        if workspace_count >= max_desktop_number:
+            yield
+            return
+
+        gsettings = gio_utils.GSettings(access_dynamic_workspaces=True, access_num_workspaces=True)
+        if gsettings.is_dynamic_workspaces():
+            gsettings.disable_dynamic_workspaces()
+            try:
+                gsettings.set_workspaces_number(max_desktop_number)
+                try:
+                    yield
+                finally:
+                    gsettings.enable_dynamic_workspaces()
+            except Exception as e:
+                import traceback
+                print(traceback.format_exc())
+        else:
+            workspaces_number = gsettings.get_workspaces_number()
+            if max_desktop_number > workspaces_number:
+                gsettings.set_workspaces_number(max_desktop_number)
+            yield
+    else:
+        yield

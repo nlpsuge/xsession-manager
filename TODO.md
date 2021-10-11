@@ -44,3 +44,5 @@ Note that this to-do list may not cover all cases.
 - [x] Support display version via -v/--version
 - [ ] Add an option to allow root user to run this tool?
     - [ ] Add --allow-root
+- [ ] Add restoring history
+

@@ -203,7 +203,7 @@ class XSessionManager:
                     x_session_config_object.pid = None
 
                 max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
-                with self.create_enough_workspaces(max_desktop_number):
+                with wnck_utils.create_enough_workspaces(max_desktop_number):
                     x_session_config_objects_copy.sort(key=attrgetter('memory_percent'), reverse=True)
                     restore_thread = restore_sessions_async(x_session_config_objects_copy)
                     restore_thread.join()
@@ -280,35 +280,6 @@ class XSessionManager:
             self._suppress_log_if_already_in_workspace = True
             self.move_window(session_name)
 
-    @contextmanager
-    def create_enough_workspaces(self, max_desktop_number: int):
-        # Create enough workspaces
-        if wnck_utils.is_gnome():
-            workspace_count = wnck_utils.get_workspace_count()
-            if workspace_count >= max_desktop_number:
-                yield
-                return
-
-            gsettings = gio_utils.GSettings(access_dynamic_workspaces=True, access_num_workspaces=True)
-            if gsettings.is_dynamic_workspaces():
-                gsettings.disable_dynamic_workspaces()
-                try:
-                    gsettings.set_workspaces_number(max_desktop_number)
-                    try:
-                        yield
-                    finally:
-                        gsettings.enable_dynamic_workspaces()
-                except Exception as e:
-                    import traceback
-                    print(traceback.format_exc())
-            else:
-                workspaces_number = gsettings.get_workspaces_number()
-                if max_desktop_number > workspaces_number:
-                    gsettings.set_workspaces_number(max_desktop_number)
-                yield
-        else:
-            yield
-
     def close_windows(self, including_apps_with_multiple_windows: bool = False):
         sessions: List[XSessionConfigObject] = \
             self.get_session_details(remove_duplicates_by_pid=False,
@@ -358,7 +329,7 @@ class XSessionManager:
             return
 
         max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
-        with self.create_enough_workspaces(max_desktop_number):
+        with wnck_utils.create_enough_workspaces(max_desktop_number):
             for namespace_obj in x_session_config_objects:
                 try:
                     self._move_window(namespace_obj, need_retry=False)
