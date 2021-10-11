@@ -10,7 +10,7 @@ This project relies on [wmctrl](http://tripie.sweb.cz/utils/wmctrl/), which is w
 
 ## Install
 ### Install dependencies
-+ Fedora 33
++ Fedora
 ```Bash
 dnf install python3-devel python3-tkinter wmctrl
 ```
