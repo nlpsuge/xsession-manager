@@ -114,7 +114,7 @@ class GDesktopAppInfo:
         For more information please visit https://gitlab.gnome.org/GNOME/glib/-/issues/2232 and it's related issues.
         """
 
-        with threading.RLock():
+        with threading.Lock():
             if len(self._all_desktop_apps_info_cache) == 0:
                 desktop_apps: List[DesktopAppInfo] = DesktopAppInfo().get_all()
                 self._all_desktop_apps_info_cache = desktop_apps
