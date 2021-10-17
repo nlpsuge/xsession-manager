@@ -40,13 +40,13 @@ Save all running GUI windows to `xsession-default`
 xsm -s
 ```
 
-Specify a session name like, `my-session-name`, restore it later on by running `xsm -s my-session-name`. This feature should be very helpful when you have multiple tasks to do and each task need different GUI apps.
+Specify a session name like, `my-session-name`, restore it later on by running `xsm -s my-session-name`. This feature should be very helpful when you have multiple tasks to do and each task needs different GUI apps.
 ```Bash
 xsm -s my-session-name
 ```
 
 Note: 
-1. It will save some window states, which include Always on Top and Always on Visible Workspace. These saved states will be used when executing `xsm -r` or `xsm -ma`.
+1. It will save some window states, which include Always on Top and Always on Visible Workspace and will be used when executing `xsm -r` or `xsm -ma`.
 
 + Close running windows except those apps with mutiple windows. It's better to leave them to the user to close by hand, some apps like JetBrain's IDEs may have their own session. 
 ```Bash
