@@ -58,9 +58,9 @@ class ArgumentsParser:
                             help='Auto move windows to specified workspaces according to a saved session. '
                                  'The default session is `xsession-default`')
 
-        parser.add_argument('--version',
-                            action='version',
-                            version=__version__)
+        parser.add_argument('--version', action='version')
+
+        parser.add_argument('-v', '--verbose', action='store_true')
 
         if len(sys.argv) == 1:
             print('No arguments provided.\n')
