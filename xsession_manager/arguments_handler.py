@@ -82,10 +82,6 @@ def check_and_reset_args(args: Namespace):
             wait_for_answer()
             print("Let's rock!")
 
-        # Give user a warning
-        # raise argparse.ArgumentTypeError('You must specify the \'-c/--close-all\' flags to close the current '
-        #                                  'session before restoring a session.')
-
 
 def wait_for_answer():
     answer = input("Please type your answer (y/N): ")
@@ -146,7 +142,6 @@ def handle_arguments(args: Namespace):
         import os
         walk: (list, list, str) = os.walk(constants.Locations.BASE_LOCATION_OF_SESSIONS)
         for root, dirs, files in walk:
-            # files.sort()
             for file in files:
                 with open(Path(root, file), 'r') as f:
                     namespace_objs: XSessionConfig = json.load(f, object_hook=lambda d: Namespace(**d))

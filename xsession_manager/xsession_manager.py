@@ -165,13 +165,9 @@ class XSessionManager:
         with open(session_path, 'r') as file:
             print('Restoring session located [%s] ' % session_path)
             namespace_objs: XSessionConfig = json.load(file, object_hook=lambda d: Namespace(**d))
-            # Note: os.fork() does not support the Windows
+            # Note: os.fork() does not support MS Windows
             pid = os.fork()
-            # Run command lines in the child process
-            # TODO 1. I'm not sure if this method works well and is the best practice
-            # TODO 2. Must run in the child process or receive this error:
-            # Gdk-Message: 23:23:24.613: main.py: Fatal IO error 11 (Resource temporarily unavailable) on X server :1
-            # Not know the root cause
+            # Launch APPs in the child process
             if pid == 0:
                 x_session_config_objects: List[XSessionConfigObject] = namespace_objs.x_session_config_objects
                 # Remove duplicates according to pid
@@ -239,7 +235,6 @@ class XSessionManager:
                     namespace_obj.pid = process.pid
                     succeeded_restores.append(index)
                     self.move_window(session_name)
-                    # print('Success to restore application:     [%s]' % app_name)
 
                     # Wait some time, in case of freezing the entire system
                     sleep(restoring_interval)
@@ -274,9 +269,6 @@ class XSessionManager:
         while retry_count_down > 0:
             retry_count_down = retry_count_down - 1
             sleep(1.5)
-            # xsm = XSessionManager(self.session_filters)
-            # xsm._suppress_log_if_already_in_workspace = True
-            # xsm.move_window(session_name)
             self._suppress_log_if_already_in_workspace = True
             self.move_window(session_name)
 
@@ -337,12 +329,6 @@ class XSessionManager:
                     import traceback
                     print(traceback.format_exc())
 
-        # Some apps may not be launched successfully due to any possible reason
-        # if len(self._windows_can_not_be_moved) > 0:
-        #     print('Those windows cannot be moved: ')
-        #     for w in self._windows_can_not_be_moved:
-        #         print(w)
-
     def _get_max_desktop_number(self, x_session_config_objects):
         return max([x_session_config_object.desktop_number
                     for x_session_config_object in x_session_config_objects]) + 1
@@ -384,7 +370,6 @@ class XSessionManager:
 
                     if self._is_same_cmd(p, cmd):
                         pids.append(p.pid)
-                        # break
 
             if len(pids) == 0:
                 self._windows_can_not_be_moved.append(saved_window)
@@ -424,7 +409,6 @@ class XSessionManager:
                             continue
                         moving_windows.append(running_window)
                         no_need_to_move = False
-                        # break
                 else:
                     no_need_to_move = False
 

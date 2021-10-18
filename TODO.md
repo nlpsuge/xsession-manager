@@ -4,7 +4,7 @@ Note that this to-do list may not cover all cases.
   - [x] Supported Wine apps installed via Snap
 - [x] Support Snap applications
 - [ ] Avoid saving system's applications
-- [x] Store settings in the json format file
+- [x] Store sessions in a json format file
 - [ ] Store settings in a kind of DB? No need for now, I think
 - [x] Save a session (-a/--save)
 - [x] Restore a session (-r/--restore)
