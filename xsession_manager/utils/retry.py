@@ -19,5 +19,4 @@ class Retry:
             try:
                 return func(*args)
             except NeedRetryException:
-                # print('Retrying ... (%d/%d)' % ((i + 1), self.retry_num))
                 sleep(self.retry_interval)
