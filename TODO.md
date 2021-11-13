@@ -45,4 +45,4 @@ Note that this to-do list may not cover all cases.
 - [ ] Add an option to allow root user to run this tool?
     - [ ] Add --allow-root
 - [ ] Add restoring history
-
+- [ ] Add -q combined with -t to query details
