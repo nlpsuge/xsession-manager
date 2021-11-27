@@ -140,7 +140,7 @@ def handle_arguments(args: Namespace):
 
     if list_sessions:
         import os
-        walk: (list, list, str) = os.walk(constants.Locations.BASE_LOCATION_OF_SESSIONS)
+        walk = os.walk(constants.Locations.BASE_LOCATION_OF_SESSIONS)
         for root, dirs, files in walk:
             for file in files:
                 with open(Path(root, file), 'r') as f:
