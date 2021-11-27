@@ -4,7 +4,7 @@ from .settings.xsession_config import XSessionConfigObject
 from .utils.number_utils import is_int, is_hexadecimal
 
 
-def filter_session(session, includes):
+def filter_session(session: XSessionConfigObject, includes):
     for include in includes:
         ii, value = is_int(include)
         if ii and value == session.pid:
