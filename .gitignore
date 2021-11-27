@@ -4,3 +4,4 @@ venv
 build
 dist
 xsession_manager.egg-info
+.history
