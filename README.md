@@ -1,12 +1,14 @@
 # [xsession-manager](https://github.com/nlpsuge/xsession-manager)
 
-Python-based command line tool to save and restore sessions for X11 desktops like Gnome, 
-and other features to maintain sessions. The project is currently in an early stage of development.
+Save and restore windows for X11 desktop environment like Gnome, and many other features.
 
 This project was written in ```Bash``` originally. But now I'm completely rewriting it in ```Python```
 which obviously makes it way more flexible, extensible.
 
-This project relies on [wmctrl](http://tripie.sweb.cz/utils/wmctrl/), which is why you have to install it beforehand.
+[![Downloads](https://pepy.tech/badge/xsession-manager/month)](https://pepy.tech/project/xsession-manager)
+[![Supported Versions](https://img.shields.io/pypi/pyversions/xsession-manager.svg)](https://pypi.org/project/xsession-manager)
+[![Pypi Versions](https://img.shields.io/pypi/v/xsession-manager.svg)](https://pypi.python.org/pypi/xsession-manager)
+[![Contributors](https://img.shields.io/github/contributors/nlpsuge/xsession-manager.svg)](https://github.com/nlpsuge/xsession-manager/graphs/contributors)
 
 ## Install
 ### Install dependencies
