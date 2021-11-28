@@ -139,13 +139,16 @@ def handle_arguments(args: Namespace):
             xsm.restore_session(pop_up_a_dialog_to_restore, restoring_interval)
 
     if list_sessions:
+        print()
         import os
         walk = os.walk(constants.Locations.BASE_LOCATION_OF_SESSIONS)
+        num = 0
         for root, dirs, files in walk:
             for file in files:
                 with open(Path(root, file), 'r') as f:
+                    num = num + 1
                     namespace_objs: XSessionConfig = json.load(f, object_hook=lambda d: Namespace(**d))
-                    print(namespace_objs.session_name, namespace_objs.session_create_time, str(Path(root, file)),
+                    print(str(num) +'. ' + namespace_objs.session_name, namespace_objs.session_create_time, str(Path(root, file)),
                           sep='  ')
 
             break
