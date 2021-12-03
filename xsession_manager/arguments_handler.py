@@ -145,12 +145,18 @@ def handle_arguments(args: Namespace):
         num = 0
         for root, dirs, files in walk:
             for file in files:
-                with open(Path(root, file), 'r') as f:
-                    num = num + 1
-                    namespace_objs: XSessionConfig = json.load(f, object_hook=lambda d: Namespace(**d))
-                    print(str(num) +'. ' + namespace_objs.session_name, namespace_objs.session_create_time, str(Path(root, file)),
-                          sep='  ')
-
+                try:
+                    file_path = Path(root, file)
+                    with open(file_path, 'r') as f:
+                        num = num + 1
+                        namespace_objs: XSessionConfig = json.load(f, object_hook=lambda d: Namespace(**d))
+                        print(str(num) +'. ' + namespace_objs.session_name, namespace_objs.session_create_time, str(Path(root, file)),
+                            sep='  ')
+                except:
+                    print('Failed to list file: %s' % file_path)
+                    import traceback
+                    print(traceback.format_exc())
+                
             break
 
     if session_details:
