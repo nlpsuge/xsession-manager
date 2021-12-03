@@ -214,7 +214,7 @@ class XSessionManager:
 
         failed_restores = []
         succeeded_restores = []
-        running_session: XSessionConfigObject = self.get_session_details(remove_duplicates_by_pid=False, 
+        running_session: XSessionConfig = self.get_session_details(remove_duplicates_by_pid=False, 
                                                                          session_filters=self.session_filters);
         for index, namespace_obj in enumerate(_x_session_config_objects_copy):
             cmd: list = namespace_obj.cmd
@@ -223,7 +223,7 @@ class XSessionManager:
                 is_running = False
                 for running_window in running_session.x_session_config_objects:
                     if self._is_same_window(running_window, namespace_obj) and self._is_same_cmd(running_window.cmd, cmd):
-                        print('%s is running, skip...' % app_name)
+                        print('%s is running in Workspace %d, skip...' % (app_name, running_window.desktop_number))
                         is_running = True
                         break;
                 if is_running:
