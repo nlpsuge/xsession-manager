@@ -27,7 +27,7 @@ def check_and_reset_args(args: Namespace):
 
     # Need to deal with this kind of case when user type -s' '
     argv = [a.strip() for a in sys.argv[1:]]
-    print('Arguments input by user: ' + str(argv))
+    # print('Arguments input by user: ' + str(argv))
     if string_utils.empty_string(save) \
             and ('-s' in argv or '--save' in argv):
         args.save = Locations.DEFAULT_SESSION_NAME
@@ -54,7 +54,7 @@ def check_and_reset_args(args: Namespace):
         raise argparse.ArgumentTypeError('argument -im/--including-apps-with-multiple-windows : '
                                          'only allowed with -c/--close-all')
 
-    print('Namespace object after handling by this program: ' + str(args))
+    # print('Namespace object after handling by this program: ' + str(args))
 
     if save or restore or close_all:
         if list_sessions:

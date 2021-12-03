@@ -10,7 +10,7 @@ def run():
     check_login_condition()
     parser = ArgumentsParser()
     args = parser.parse_arguments()
-    print('Namespace object before handling by this program: ' + str(args))
+    # print('Namespace object before handling by this program: ' + str(args))
     arguments_handler.check_and_reset_args(args)
     arguments_handler.handle_arguments(args)
 

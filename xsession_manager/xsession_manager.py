@@ -47,7 +47,7 @@ class XSessionManager:
         self.opened_window_id_pid_lock = threading.RLock()
         self._windows_can_not_be_moved: List[XSessionConfigObject] = []
         self._if_restore_geometry = False
-        self.silence = False
+        self.silence = True
 
     def save_session(self, session_name: str, session_filter: SessionFilter=None):
         x_session_config = self.get_session_details(remove_duplicates_by_pid=False,
@@ -214,10 +214,21 @@ class XSessionManager:
 
         failed_restores = []
         succeeded_restores = []
+        running_session: XSessionConfigObject = self.get_session_details(remove_duplicates_by_pid=False, 
+                                                                         session_filters=self.session_filters);
         for index, namespace_obj in enumerate(_x_session_config_objects_copy):
             cmd: list = namespace_obj.cmd
             app_name: str = namespace_obj.app_name
             try:
+                is_running = False
+                for running_window in running_session.x_session_config_objects:
+                    if self._is_same_window(running_window, namespace_obj) and self._is_same_cmd(running_window.cmd, cmd):
+                        print('%s is running, skip...' % app_name)
+                        is_running = True
+                        break;
+                if is_running:
+                    continue
+                
                 print('Restoring application:              [%s]' % app_name)
                 if len(cmd) == 0:
                     so = suppress_output.SuppressOutput(True, True)
@@ -368,7 +379,7 @@ class XSessionManager:
                     if len(p.cmdline()) <= 0:
                         continue
 
-                    if self._is_same_cmd(p, cmd):
+                    if self._is_same_cmd(p.cmdline(), cmd):
                         pids.append(p.pid)
 
             if len(pids) == 0:
@@ -486,11 +497,14 @@ class XSessionManager:
 
         return False
 
-    def _is_same_cmd(self, p: psutil.Process, second_cmd: List):
-        first_cmdline = [c for c in p.cmdline() if (c != "--gapplication-service" and not c.startswith('--pid='))]
+    def _is_same_cmd(self, first_cmdline: List, second_cmd: List):
+        first_cmdline = [c for c in first_cmdline if (c != "--gapplication-service" and not c.startswith('--pid='))]
         second_cmd = [c for c in second_cmd if (c != "--gapplication-service" and not c.startswith('--pid='))]
+        if len(first_cmdline) == 0 and len(second_cmd) == 0:
+            return True
+        
         if len(first_cmdline) <= 0 or len(second_cmd) <= 0:
-            return
+            return False
 
         first_one_is_snap_app, first_snap_app_name = snapd_workaround.Snapd.is_snap_app(first_cmdline[0])
         if first_one_is_snap_app:
