@@ -5,7 +5,7 @@
 
 import json
 import re
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import pycurl
 
@@ -60,7 +60,7 @@ class Snapd:
         return result[0]
 
     @staticmethod
-    def is_snap_app(app_cmd: str) -> (bool, str):
+    def is_snap_app(app_cmd: str) -> Tuple[bool, str]:
         # Visit https://regex101.com/r/SXUlVX/ to check the explanation of this regular expression pattern
         c = re.compile(r'([\/]|[\\]{,2})snap([\/]|[\\]{,2})[\w:\-]+([\/]|[\\]{,2})[\d]+')
         r = c.search(app_cmd)
@@ -70,7 +70,7 @@ class Snapd:
             return True, snap_app_name
         return False, None
 
-    def launch(self, app_names: List[str], suppress_stdout=True, suppress_stderr=True) -> bool:
+    def launch_app(self, app_names: List[str], suppress_stdout=True, suppress_stderr=True) -> bool:
         """
         Launch a application according to the app names.
 

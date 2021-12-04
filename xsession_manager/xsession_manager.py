@@ -256,7 +256,7 @@ class XSessionManager:
 
                 namespace_obj.cmd = [c for c in cmd if c != "--gapplication-service"]
                 try:
-                    process = subprocess_utils.run_cmd(namespace_obj.cmd)
+                    process = subprocess_utils.launch_app(namespace_obj.cmd)
                     namespace_obj.pid = process.pid
                     succeeded_restores.append(index)
                     self.move_window(session_name)
@@ -271,7 +271,7 @@ class XSessionManager:
                     is_snap_app, snap_app_name = snapd.is_snap_app(part_cmd)
                     if is_snap_app:
                         print('%s is a Snap app' % app_name)
-                        launched = snapd.launch([snap_app_name])
+                        launched = snapd.launch_app([snap_app_name])
 
                     if not launched:
                         launched = gio_utils.GDesktopAppInfo().launch_app(app_name)
