@@ -228,7 +228,7 @@ class XSessionManager:
             try:
                 is_running = False
                 for running_window in running_session.x_session_config_objects:
-                    if self._is_same_window(running_window, namespace_obj) \
+                    if self._is_same_app(running_window, namespace_obj) \
                             and self._is_same_cmd(running_window.cmd, cmd):
                         print('%s is running in Workspace %d, skip...' % (app_name, running_window.desktop_number))
                         is_running = True
@@ -498,6 +498,14 @@ class XSessionManager:
             if window_state.is_above:
                 wnck_utils.make_above(window_id_the_int_type)
 
+    def _is_same_app(self, running_window1: XSessionConfigObject, window2: XSessionConfigObject):
+        app_name1 = wnck_utils.get_app_name(running_window1.window_id_the_int_type)
+        app_name2 = window2.app_name
+        if string_utils.empty_string(app_name1) \
+                or string_utils.empty_string(app_name2):
+            return False
+        return app_name1 == app_name2
+    
     def _is_same_window(self, running_window1: XSessionConfigObject, window2: XSessionConfigObject):
         # Deal with JetBrains products. Move the window if they are the same project.
         app_name1 = wnck_utils.get_app_name(running_window1.window_id_the_int_type)
