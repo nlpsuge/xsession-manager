@@ -1,6 +1,7 @@
 # Note: Wnck may not works in Wayland
 from contextlib import contextmanager
 from time import time
+from typing import Tuple
 
 from . import gio_utils
 
@@ -117,7 +118,7 @@ def count_windows(xid: int) -> int:
     return app.get_n_windows()
 
 
-def get_geometry(xid: int) -> (int, int, int, int):
+def get_geometry(xid: int) -> Tuple[int, int, int, int]:
     window = get_window(xid)
     if window:
         geometry = window.get_geometry()
