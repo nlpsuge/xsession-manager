@@ -119,16 +119,18 @@ class ArgumentsHandler():
         if session_name_for_saving:
             print(constants.Prompts.MSG_SAVE % session_name_for_saving)
             self.wait_for_answer()
-            xsm = XSessionManager()
+            xsm = XSessionManager(verbose=self.args.verbose, vv=self.args.vv)
             xsm.save_session(session_name_for_saving)
 
         if close_all is not None:
             print(constants.Prompts.MSG_CLOSE_ALL_WINDOWS)
             self.wait_for_answer()
             # TODO Order sensitive?
-            xsm = XSessionManager([IncludeSessionFilter(close_all),
-                                IncludeSessionFilter(include),
-                                ExcludeSessionFilter(exclude)])
+            xsm = XSessionManager(verbose=self.args.verbose,
+                                  vv=self.args.vv,
+                                  session_filters=[IncludeSessionFilter(close_all),
+                                                   IncludeSessionFilter(include),
+                                                   ExcludeSessionFilter(exclude)])
             xsm.close_windows(including_apps_with_multiple_windows)
             print('Done!')
 
@@ -142,15 +144,17 @@ class ArgumentsHandler():
                         
             print(constants.Prompts.MSG_RESTORE % session_name_for_restoring)
             self.wait_for_answer()
-            xsm = XSessionManager([IncludeSessionFilter(include),
-                                ExcludeSessionFilter(exclude)])
+            xsm = XSessionManager(verbose=self.args.verbose,
+                                  vv=self.args.vv,
+                                  session_filters=[IncludeSessionFilter(include),
+                                                   ExcludeSessionFilter(exclude)])
             xsm.restore_session(session_name_for_restoring, restoring_interval)
 
         if pop_up_a_dialog_to_restore:
             answer = create_askyesno_dialog(constants.Prompts.MSG_POP_UP_A_DIALOG_TO_RESTORE
                                             % pop_up_a_dialog_to_restore)
             if answer:
-                xsm = XSessionManager()
+                xsm = XSessionManager(verbose=self.args.verbose, vv=self.args.vv)
                 xsm.restore_session(pop_up_a_dialog_to_restore, restoring_interval)
 
         # Sort sessions based on motification time in ascending order
@@ -228,6 +232,8 @@ class ArgumentsHandler():
                     print()
 
         if move_automatically:
-            xsm = XSessionManager([IncludeSessionFilter(include),
-                                ExcludeSessionFilter(exclude)])
+            xsm = XSessionManager(verbose=self.args.verbose,
+                                  vv=self.args.vv,
+                                  session_filters=[IncludeSessionFilter(include),
+                                                   ExcludeSessionFilter(exclude)])
             xsm.move_window(move_automatically)

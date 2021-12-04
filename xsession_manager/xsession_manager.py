@@ -33,7 +33,10 @@ class XSessionManager:
     base_location_of_sessions: str
     base_location_of_backup_sessions: str
 
-    def __init__(self, session_filters: List[SessionFilter]=None,
+    def __init__(self, 
+                 verbose: bool,
+                 vv: bool,
+                 session_filters: List[SessionFilter]=None,
                  base_location_of_sessions: str=Locations.BASE_LOCATION_OF_SESSIONS,
                  base_location_of_backup_sessions: str=Locations.BASE_LOCATION_OF_BACKUP_SESSIONS):
         self.session_filters = session_filters
@@ -47,7 +50,8 @@ class XSessionManager:
         self.opened_window_id_pid_lock = threading.RLock()
         self._windows_can_not_be_moved: List[XSessionConfigObject] = []
         self._if_restore_geometry = False
-        self.silence = True
+        self.verbose = verbose
+        self.vv = vv
 
     def save_session(self, session_name: str, session_filter: SessionFilter=None):
         x_session_config = self.get_session_details(remove_duplicates_by_pid=False,
@@ -67,10 +71,13 @@ class XSessionManager:
         # Save a new session
         x_session_config.session_create_time = datetime.datetime.fromtimestamp(time()).strftime("%Y-%m-%d %H:%M:%S.%f")
         save_session_details_json = json.dumps(x_session_config, default=lambda o: o.__dict__)
-        print('Saving the new json format x session [%s] ' % save_session_details_json)
+        
+        if self.vv:
+            print('Saving the new json format x session [%s] ' % save_session_details_json)
+        
         self.write_session(session_path, save_session_details_json)
         print('Done!')
-
+        
     def get_session_details(self, remove_duplicates_by_pid=True,
                             session_filters: List[SessionFilter]=None) -> XSessionConfig:
 
@@ -86,7 +93,7 @@ class XSessionManager:
         running_windows: list = wmctl_wrapper.get_running_windows()
         x_session_config: XSessionConfig = XSessionConfigObject.convert_wmctl_result_2_list(running_windows,
                                                                                             remove_duplicates_by_pid)
-        if self.silence is False:
+        if self.vv:
             print('Got the process list according to wmctl: %s' % json.dumps(x_session_config, default=lambda o: o.__dict__))
         x_session_config_objects: List[XSessionConfigObject] = x_session_config.x_session_config_objects
         for idx, sd in enumerate(x_session_config_objects):
@@ -128,7 +135,7 @@ class XSessionManager:
                 x_session_config.x_session_config_objects[:] = \
                     session_filter(x_session_config.x_session_config_objects)
 
-        if self.silence is False:
+        if self.vv:
             print('Complete the process list according to psutil: %s' %
                   json.dumps(x_session_config, default=lambda o: o.__dict__))
         return x_session_config
@@ -136,7 +143,6 @@ class XSessionManager:
     def backup_session(self, original_session_path):
         backup_time = datetime.datetime.fromtimestamp(time())
         with open(original_session_path, 'r') as file:
-            print('Backing up session located [%s] ' % original_session_path)
             namespace_objs: XSessionConfig = json.load(file, object_hook=lambda d: Namespace(**d))
         current_time_str_as_backup_id = backup_time.strftime("%Y%m%d%H%M%S%f")
         backup_session_path = Path(self.base_location_of_backup_sessions,
