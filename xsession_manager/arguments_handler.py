@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -152,27 +153,29 @@ class ArgumentsHandler():
                 xsm = XSessionManager()
                 xsm.restore_session(pop_up_a_dialog_to_restore, restoring_interval)
 
+        # Sort sessions based on motification time in ascending order
         if list_sessions:
             print()
-            import os
-            walk = os.walk(constants.Locations.BASE_LOCATION_OF_SESSIONS)
-            num = 0
-            for root, dirs, files in walk:
-                for file in files:
-                    try:
-                        file_path = Path(root, file)
-                        with open(file_path, 'r') as f:
-                            num = num + 1
-                            namespace_objs: XSessionConfig = json.load(f, object_hook=lambda d: Namespace(**d))
-                            print(str(num) +'. ' + namespace_objs.session_name, namespace_objs.session_create_time, str(Path(root, file)),
-                                sep='  ')
-                    except:
-                        print('Failed to list file: %s' % file_path)
-                        import traceback
-                        print(traceback.format_exc())
-                    
-                break
-
+            session_files = filter(lambda x: os.path.isfile(os.path.join(constants.Locations.BASE_LOCATION_OF_SESSIONS, x)), 
+                                   os.listdir(constants.Locations.BASE_LOCATION_OF_SESSIONS) )
+            session_files = sorted(session_files, 
+                                   key = lambda x: os.path.getmtime(os.path.join(constants.Locations.BASE_LOCATION_OF_SESSIONS, x)))
+            num = 0            
+            for file in session_files:
+                try:
+                    file_path = Path(constants.Locations.BASE_LOCATION_OF_SESSIONS, file)
+                    with open(file_path, 'r') as f:
+                        num = num + 1
+                        namespace_objs: XSessionConfig = json.load(f, object_hook=lambda d: Namespace(**d))
+                        print(str(num) +'. ' + namespace_objs.session_name, 
+                              namespace_objs.session_create_time, 
+                              str(Path(constants.Locations.BASE_LOCATION_OF_SESSIONS, file)),
+                              sep='  ')
+                except:
+                    print('Failed to list file: %s' % file_path)
+                    import traceback
+                    print(traceback.format_exc())
+                
         if session_details:
             session_path = Path(constants.Locations.BASE_LOCATION_OF_SESSIONS, session_details)
             if self.args.verbose:
