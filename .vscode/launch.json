@@ -1,0 +1,17 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: run_main",
+            "type": "python",
+            "request": "launch",
+            "program": "xsession_manager/tests/run_main.py",
+            "console": "integratedTerminal",
+            "args": ["-r","-i", "firefox"],
+            "justMyCode": false
+        }
+    ]
+}
