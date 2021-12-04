@@ -61,7 +61,14 @@ class ArgumentsParser:
         parser.add_argument('--version',
                             action='version',
                             version=__version__)
-
+        
+        parser.add_argument('-v', '--verbose',
+                            action='store_true',
+                            help='Print debugging information')
+        parser.add_argument('-vv',
+                            action='store_true',
+                            help='Print more debugging information, could contain sensitive info')
+        
         if len(sys.argv) == 1:
             print('No arguments provided.\n')
             parser.print_help(sys.stderr)
