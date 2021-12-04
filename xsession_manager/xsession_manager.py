@@ -47,11 +47,12 @@ class XSessionManager:
         self._suppress_log_if_already_in_workspace = False
         self.opened_window_id_pid: Dict[int, List[int]] = {}
         self.opened_window_id_pid_old: Dict[int, List[int]] = {}
-        self.opened_window_id_pid_lock = threading.RLock()
+        self.instance_lock = threading.Lock()
         self._windows_can_not_be_moved: List[XSessionConfigObject] = []
         self._if_restore_geometry = False
         self.verbose = verbose
         self.vv = vv
+        self.restore_app_countdown = -1
 
     def save_session(self, session_name: str, session_filter: SessionFilter=None):
         x_session_config = self.get_session_details(remove_duplicates_by_pid=False,
@@ -136,7 +137,7 @@ class XSessionManager:
                     session_filter(x_session_config.x_session_config_objects)
 
         if self.vv:
-            print('Complete the process list according to psutil: %s' %
+            print('After completing the process list using psutil and applying filters: %s' %
                   json.dumps(x_session_config, default=lambda o: o.__dict__))
         return x_session_config
 
@@ -199,14 +200,18 @@ class XSessionManager:
                                                ))
                     t.start()
                     return t
-
+                    
                 x_session_config_objects_copy = copy.deepcopy(x_session_config_objects)
+                if self.vv:
+                    print('Restoring saved sessions using: %s' % json.dumps(x_session_config_objects_copy, default=lambda o: o.__dict__))
+                
                 for x_session_config_object in x_session_config_objects_copy:
                     x_session_config_object.pid = None
 
                 max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
                 with wnck_utils.create_enough_workspaces(max_desktop_number):
                     x_session_config_objects_copy.sort(key=attrgetter('memory_percent'), reverse=True)
+                    self.restore_app_countdown = len(x_session_config_objects_copy)
                     restore_thread = restore_sessions_async(x_session_config_objects_copy)
                     restore_thread.join()
                 print('Done!')
@@ -214,7 +219,7 @@ class XSessionManager:
     def _restore_sessions(self,
                           session_name,
                           restoring_interval,
-                          _x_session_config_objects_copy: List[XSessionConfigObject]):
+                          _x_session_config_objects_copy: List[XSessionConfigObject]):    
         self._suppress_log_if_already_in_workspace = True
         self._if_restore_geometry = True
 
@@ -232,6 +237,8 @@ class XSessionManager:
                             and self._is_same_cmd(running_window.cmd, cmd):
                         print('%s is running in Workspace %d, skip...' % (app_name, running_window.desktop_number))
                         is_running = True
+                        with self.instance_lock:
+                            self.restore_app_countdown = self.restore_app_countdown - 1
                         break;
                 if is_running:
                     continue
@@ -285,6 +292,9 @@ class XSessionManager:
         # Retry about 2 minutes
         retry_count_down = 60
         while retry_count_down > 0:
+            if self.restore_app_countdown <= 0:
+                break
+            
             retry_count_down = retry_count_down - 1
             sleep(1.5)
             self._suppress_log_if_already_in_workspace = True
