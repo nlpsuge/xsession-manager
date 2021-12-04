@@ -222,7 +222,8 @@ class XSessionManager:
             try:
                 is_running = False
                 for running_window in running_session.x_session_config_objects:
-                    if self._is_same_window(running_window, namespace_obj) and self._is_same_cmd(running_window.cmd, cmd):
+                    if self._is_same_window(running_window, namespace_obj) \
+                            and self._is_same_cmd(running_window.cmd, cmd):
                         print('%s is running in Workspace %d, skip...' % (app_name, running_window.desktop_number))
                         is_running = True
                         break;
@@ -376,10 +377,16 @@ class XSessionManager:
                     return
 
                 for p in psutil.process_iter(attrs=['pid', 'cmdline']):
-                    if len(p.cmdline()) <= 0:
+                    try:
+                        cmdline: list = p.cmdline()
+                    except:
+                        # Eat all exceptions raised here, a process could exist a short while
+                        continue
+                    
+                    if len(cmdline) <= 0:
                         continue
 
-                    if self._is_same_cmd(p.cmdline(), cmd):
+                    if self._is_same_cmd(cmdline, cmd):
                         pids.append(p.pid)
 
             if len(pids) == 0:
@@ -485,14 +492,14 @@ class XSessionManager:
             if window_state.is_above:
                 wnck_utils.make_above(window_id_the_int_type)
 
-    def _is_same_window(self, window1: XSessionConfigObject, window2: XSessionConfigObject):
+    def _is_same_window(self, running_window1: XSessionConfigObject, window2: XSessionConfigObject):
         # Deal with JetBrains products. Move the window if they are the same project.
-        app_name1 = wnck_utils.get_app_name(window1.window_id_the_int_type)
+        app_name1 = wnck_utils.get_app_name(running_window1.window_id_the_int_type)
         app_name2 = window2.app_name
         if app_name1 == app_name2 and app_name1.startswith('jetbrains-'):
-            return window1.window_title.split(' ')[0] == window2.window_title.split(' ')[0]
+            return running_window1.window_title.split(' ')[0] == window2.window_title.split(' ')[0]
 
-        if window1.window_title == window2.window_title:
+        if running_window1.window_title == window2.window_title:
             return True
 
         return False

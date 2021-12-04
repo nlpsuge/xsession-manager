@@ -51,6 +51,9 @@ def get_workspace_count():
 
 def get_app_name(xid: int) -> str:
     window = get_window(xid)
+    if not window:
+        return ''
+    
     # See: https://developer.gnome.org/libwnck/stable/WnckWindow.html#wnck-window-get-class-group-name
     # See: https://tronche.com/gui/x/icccm/sec-4.html#WM_CLASS
     name = window.get_class_group_name()
