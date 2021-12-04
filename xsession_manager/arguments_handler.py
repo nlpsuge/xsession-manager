@@ -86,20 +86,6 @@ class ArgumentsHandler():
                 raise argparse.ArgumentTypeError('argument -ma/--move-automatically : '
                                                 'not allowed with any argument of -s/--save, -r/--restore, -c/--close-all')
 
-        if close_all is None \
-                and not string_utils.empty_string(restore):
-            # get the opening windows via wmctl
-            if vv:
-                print("Opening windows list:")
-                running_windows = wmctl_wrapper.get_running_windows_raw()
-                if len(running_windows) > 0:
-                    for rw in running_windows:
-                        print(rw)
-                    
-            print('Do you want to continue to restore a session?')
-            self.wait_for_answer()
-            print("Let's rock!")
-
 
     def wait_for_answer(self):
         answer = input("Please type your answer (y/N): ")
@@ -146,6 +132,13 @@ class ArgumentsHandler():
             print('Done!')
 
         if session_name_for_restoring:
+            if self.args.vv:
+                print("Opening windows list:")
+                running_windows = wmctl_wrapper.get_running_windows_raw()
+                if len(running_windows) > 0:
+                    for rw in running_windows:
+                        print(rw)
+                        
             print(constants.Prompts.MSG_RESTORE % session_name_for_restoring)
             self.wait_for_answer()
             xsm = XSessionManager([IncludeSessionFilter(include),
@@ -182,7 +175,8 @@ class ArgumentsHandler():
 
         if session_details:
             session_path = Path(constants.Locations.BASE_LOCATION_OF_SESSIONS, session_details)
-            print('Looking for session located [%s] ' % session_path)
+            if self.args.verbose:
+                print('Looking for session located [%s] ' % session_path)
             if not session_path.exists():
                 print('[%s] not found.' % session_path)
                 return
