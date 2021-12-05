@@ -33,12 +33,12 @@ class XSessionManager:
     base_location_of_sessions: str
     base_location_of_backup_sessions: str
 
-    def __init__(self, 
+    def __init__(self,
                  verbose: bool,
                  vv: bool,
-                 session_filters: List[SessionFilter]=None,
-                 base_location_of_sessions: str=Locations.BASE_LOCATION_OF_SESSIONS,
-                 base_location_of_backup_sessions: str=Locations.BASE_LOCATION_OF_BACKUP_SESSIONS):
+                 session_filters: List[SessionFilter] = None,
+                 base_location_of_sessions: str = Locations.BASE_LOCATION_OF_SESSIONS,
+                 base_location_of_backup_sessions: str = Locations.BASE_LOCATION_OF_BACKUP_SESSIONS):
         self.session_filters = session_filters
         self.base_location_of_sessions = base_location_of_sessions
         self.base_location_of_backup_sessions = base_location_of_backup_sessions
@@ -54,7 +54,7 @@ class XSessionManager:
         self.vv = vv
         self.restore_app_countdown = -1
 
-    def save_session(self, session_name: str, session_filter: SessionFilter=None):
+    def save_session(self, session_name: str, session_filter: SessionFilter = None):
         x_session_config = self.get_session_details(remove_duplicates_by_pid=False,
                                                     session_filters=[session_filter])
         x_session_config.session_name = session_name
@@ -72,16 +72,15 @@ class XSessionManager:
         # Save a new session
         x_session_config.session_create_time = datetime.datetime.fromtimestamp(time()).strftime("%Y-%m-%d %H:%M:%S.%f")
         save_session_details_json = json.dumps(x_session_config, default=lambda o: o.__dict__)
-        
+
         if self.vv:
             print('Saving the new json format x session [%s] ' % save_session_details_json)
-        
+
         self.write_session(session_path, save_session_details_json)
         print('Done!')
-        
-    def get_session_details(self, remove_duplicates_by_pid=True,
-                            session_filters: List[SessionFilter]=None) -> XSessionConfig:
 
+    def get_session_details(self, remove_duplicates_by_pid=True,
+                            session_filters: List[SessionFilter] = None) -> XSessionConfig:
         """
         Get the current running session details, including app name, process id,
         window position, command line etc of each app.
@@ -95,7 +94,7 @@ class XSessionManager:
         x_session_config: XSessionConfig = XSessionConfigObject.convert_wmctl_result_2_list(running_windows,
                                                                                             remove_duplicates_by_pid)
         if self.vv:
-            print('Got the process list according to wmctl: %s' % json.dumps(x_session_config, default=lambda o: o.__dict__))
+            print('Got the running process list according to wmctl: %s' % json.dumps(x_session_config, default=lambda o: o.__dict__))
         x_session_config_objects: List[XSessionConfigObject] = x_session_config.x_session_config_objects
         for idx, sd in enumerate(x_session_config_objects):
             try:
@@ -137,7 +136,7 @@ class XSessionManager:
                     session_filter(x_session_config.x_session_config_objects)
 
         if self.vv:
-            print('After completing the process list using psutil and applying filters: %s' %
+            print('Completed the running process list and applied filters: %s' %
                   json.dumps(x_session_config, default=lambda o: o.__dict__))
         return x_session_config
 
@@ -200,11 +199,11 @@ class XSessionManager:
                                                ))
                     t.start()
                     return t
-                    
+
                 x_session_config_objects_copy = copy.deepcopy(x_session_config_objects)
                 if self.vv:
                     print('Restoring saved sessions using: %s' % json.dumps(x_session_config_objects_copy, default=lambda o: o.__dict__))
-                
+
                 for x_session_config_object in x_session_config_objects_copy:
                     x_session_config_object.pid = None
 
@@ -219,14 +218,14 @@ class XSessionManager:
     def _restore_sessions(self,
                           session_name,
                           restoring_interval,
-                          _x_session_config_objects_copy: List[XSessionConfigObject]):    
+                          _x_session_config_objects_copy: List[XSessionConfigObject]):
         self._suppress_log_if_already_in_workspace = True
         self._if_restore_geometry = True
 
         failed_restores = []
         succeeded_restores = []
-        running_session: XSessionConfig = self.get_session_details(remove_duplicates_by_pid=False, 
-                                                                         session_filters=self.session_filters);
+        running_session: XSessionConfig = self.get_session_details(remove_duplicates_by_pid=False,
+                                                                   session_filters=self.session_filters)
         for index, namespace_obj in enumerate(_x_session_config_objects_copy):
             cmd: list = namespace_obj.cmd
             app_name: str = namespace_obj.app_name
@@ -239,15 +238,16 @@ class XSessionManager:
                         is_running = True
                         with self.instance_lock:
                             self.restore_app_countdown = self.restore_app_countdown - 1
-                        break;
+                        break
                 if is_running:
                     continue
-                
+
                 print('Restoring application:              [%s]' % app_name)
+                app_info = gio_utils.GDesktopAppInfo()
                 if len(cmd) == 0:
                     so = suppress_output.SuppressOutput(True, True)
                     with so.suppress_output():
-                        launched = gio_utils.GDesktopAppInfo().launch_app(app_name)
+                        launched = app_info.launch_app(app_name)
                         if not launched:
                             print('Failure to restore the application named %s '
                                   'due to empty commandline [%s]'
@@ -274,7 +274,8 @@ class XSessionManager:
                         launched = snapd.launch_app([snap_app_name])
 
                     if not launched:
-                        launched = gio_utils.GDesktopAppInfo().launch_app(app_name)
+                        print('Searching %s ...' % app_name)
+                        launched = app_info.launch_app(app_name)
 
                     if not launched:
                         raise fnfe
@@ -294,7 +295,7 @@ class XSessionManager:
         while retry_count_down > 0:
             if self.restore_app_countdown <= 0:
                 break
-            
+
             retry_count_down = retry_count_down - 1
             sleep(1.5)
             self._suppress_log_if_already_in_workspace = True
@@ -398,7 +399,7 @@ class XSessionManager:
                     except:
                         # Eat all exceptions raised here, a process could exist a short while
                         continue
-                    
+
                     if len(cmdline) <= 0:
                         continue
 
@@ -469,7 +470,8 @@ class XSessionManager:
                 sleep(0.25)
 
                 self._moved_windowids_cache.append(running_window_id)
-                self.fix_window_state(saved_window_state, window_id_the_int_type)
+                self.fix_window_state(saved_window_state,
+                                      window_id_the_int_type)
                 if not wnck_utils.is_sticky(window_id_the_int_type) and is_sticky:
                     wnck_utils.stick(window_id_the_int_type)
 
@@ -515,7 +517,7 @@ class XSessionManager:
                 or string_utils.empty_string(app_name2):
             return False
         return app_name1 == app_name2
-    
+
     def _is_same_window(self, running_window1: XSessionConfigObject, window2: XSessionConfigObject):
         # Deal with JetBrains products. Move the window if they are the same project.
         app_name1 = wnck_utils.get_app_name(running_window1.window_id_the_int_type)
@@ -533,7 +535,7 @@ class XSessionManager:
         second_cmd = [c for c in second_cmd if (c != "--gapplication-service" and not c.startswith('--pid='))]
         if len(first_cmdline) == 0 and len(second_cmd) == 0:
             return True
-        
+
         if len(first_cmdline) <= 0 or len(second_cmd) <= 0:
             return False
 

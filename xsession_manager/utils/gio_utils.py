@@ -4,6 +4,7 @@ from typing import List, Dict
 import gi
 from gi.overrides.Gio import Settings
 from gi.repository.Gio import DesktopAppInfo
+from gi.repository.Gio import AppLaunchContext
 
 from ..settings import constants
 from . import suppress_output
@@ -54,11 +55,15 @@ class GDesktopAppInfo:
     def __init__(self):
         # Cache all .desktop files info in this OS
         self._all_desktop_apps_info_cache: List[DesktopAppInfo] = []
+        self._app_launch_context = AppLaunchContext.new()
+        self._app_launch_context.connect('launched', self._launched)
 
-    @staticmethod
-    def launch_app_via_desktop_file(desktop_file_path) -> bool:
+    def _launched(self, app_launch_context, info, platform_data):
+            print('app [%s] launched [%s]' % (info.get_name(), platform_data['pid']))
+
+    def launch_app_via_desktop_file(self, desktop_file_path) -> bool:
         launcher: DesktopAppInfo = DesktopAppInfo().new_from_filename(desktop_file_path)
-        launched = launcher.launch()
+        launched = launcher.launch(None, self._app_launch_context)
         return launched
 
     def launch_app(self, app_name: str) -> bool:
@@ -81,7 +86,7 @@ class GDesktopAppInfo:
 
             so = suppress_output.SuppressOutput(True, True)
             with so.suppress_output():
-                return desktop_app_info.launch()
+                return desktop_app_info.launch(None, self._app_launch_context)
         elif len(desktop_apps) == 0:
             print('No result found according to %s' % app_name)
             return False
@@ -102,7 +107,7 @@ class GDesktopAppInfo:
 
                 so = suppress_output.SuppressOutput(True, True)
                 with so.suppress_output():
-                    return desktop_app_info.launch()
+                    return desktop_app_info.launch(None, self._app_launch_context)
 
             raise MoreThanOneResultFound('Multiple desktop files (%s) were found according to %s'
                                          % ([desktop_app.app_id for desktop_app in desktop_apps], app_name))

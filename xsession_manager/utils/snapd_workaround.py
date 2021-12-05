@@ -86,6 +86,6 @@ class Snapd:
             df = app['desktop-file']
             so = suppress_output.SuppressOutput(suppress_stdout, suppress_stderr)
             with so.suppress_output():
-                return gio_utils.GDesktopAppInfo.launch_app_via_desktop_file(df)
+                return gio_utils.GDesktopAppInfo().launch_app_via_desktop_file(df)
 
         print('Failed to run apps %s as a Snap app' % app_names)

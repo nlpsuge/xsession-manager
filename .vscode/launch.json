@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "xsession_manager/tests/run_main.py",
             "console": "integratedTerminal",
-            "args": ["-r","-i", "firefox"],
+            "args": ["-r","-i", "pycharm", "-vv"],
             "justMyCode": false
         }
     ]

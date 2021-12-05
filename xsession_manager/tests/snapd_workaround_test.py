@@ -43,6 +43,6 @@ def test_get_desktop_file():
 
 
 def test_launch_app():
-    launched = snapd_workaround.Snapd().launch(['authy'], False, False)
+    launched = snapd_workaround.Snapd().launch_app(['authy'], False, False)
     assert launched is True
 
