@@ -7,7 +7,7 @@ import threading
 import traceback
 from contextlib import contextmanager
 from itertools import groupby
-from multiprocessing import cpu_count
+import multiprocessing
 from multiprocessing.pool import Pool
 from operator import attrgetter
 from pathlib import Path
@@ -47,12 +47,15 @@ class XSessionManager:
         self._suppress_log_if_already_in_workspace = False
         self.opened_window_id_pid: Dict[int, List[int]] = {}
         self.opened_window_id_pid_old: Dict[int, List[int]] = {}
-        self.instance_lock = threading.Lock()
+        
         self._windows_can_not_be_moved: List[XSessionConfigObject] = []
         self._if_restore_geometry = False
         self.verbose = verbose
         self.vv = vv
         self.restore_app_countdown = -1
+
+        self.instance_lock = multiprocessing.Lock()
+        self.restore_lock = multiprocessing.Lock()
 
     def save_session(self, session_name: str, session_filter: SessionFilter = None):
         x_session_config = self.get_session_details(remove_duplicates_by_pid=False,
@@ -191,15 +194,6 @@ class XSessionManager:
                     print('Done!')
                     return
 
-                def restore_sessions_async(_x_session_config_objects_copy: List[XSessionConfigObject]):
-                    t = threading.Thread(target=self._restore_sessions,
-                                         args=(session_name,
-                                               restoring_interval,
-                                               _x_session_config_objects_copy,
-                                               ))
-                    t.start()
-                    return t
-
                 x_session_config_objects_copy = copy.deepcopy(x_session_config_objects)
                 if self.vv:
                     print('Restoring saved sessions using: %s' % json.dumps(x_session_config_objects_copy, default=lambda o: o.__dict__))
@@ -211,10 +205,42 @@ class XSessionManager:
                 with wnck_utils.create_enough_workspaces(max_desktop_number):
                     x_session_config_objects_copy.sort(key=attrgetter('memory_percent'), reverse=True)
                     self.restore_app_countdown = len(x_session_config_objects_copy)
-                    restore_thread = restore_sessions_async(x_session_config_objects_copy)
+                    restore_thread = self._restore_sessions_async(session_name, restoring_interval, x_session_config_objects_copy)
+                    move_window_thread = self._move_window_while_restore_async(session_name)
                     restore_thread.join()
+                    move_window_thread.join()
                 print('Done!')
+    
+    def _move_window_while_restore(self, session_name):
+        # Retry about 2 minutes
+        retry_count_down = 60 
+        while retry_count_down > 0:
+            if self.restore_app_countdown <= 0:
+                break
 
+            retry_count_down = retry_count_down - 1
+            sleep(1.5)
+            self._suppress_log_if_already_in_workspace = True
+            with self.restore_lock:
+                self.move_window(session_name)
+            
+    def _move_window_while_restore_async(self, session_name):
+        t = threading.Thread(target=self._move_window_while_restore, args=(session_name,))
+        t.start()
+        return t
+
+    def _restore_sessions_async(self, 
+                                session_name,
+                                restoring_interval,
+                                _x_session_config_objects_copy: List[XSessionConfigObject]):
+        t = threading.Thread(target=self._restore_sessions,
+                                args=(session_name,
+                                    restoring_interval,
+                                    _x_session_config_objects_copy,
+                                    ))
+        t.start()
+        return t
+    
     def _restore_sessions(self,
                           session_name,
                           restoring_interval,
@@ -289,17 +315,6 @@ class XSessionManager:
 
         _x_session_config_objects_copy[:] = [o for index, o in enumerate(_x_session_config_objects_copy)
                                              if index not in failed_restores]
-
-        # Retry about 2 minutes
-        retry_count_down = 60
-        while retry_count_down > 0:
-            if self.restore_app_countdown <= 0:
-                break
-
-            retry_count_down = retry_count_down - 1
-            sleep(1.5)
-            self._suppress_log_if_already_in_workspace = True
-            self.move_window(session_name)
 
     def close_windows(self, including_apps_with_multiple_windows: bool = False):
         sessions: List[XSessionConfigObject] = \
