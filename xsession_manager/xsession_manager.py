@@ -245,9 +245,7 @@ class XSessionManager:
                 print('Restoring application:              [%s]' % app_name)
                 app_info = gio_utils.GDesktopAppInfo()
                 if len(cmd) == 0:
-                    so = suppress_output.SuppressOutput(not self.vv, not self.vv)
-                    with so.suppress_output():
-                        launched = app_info.launch_app(app_name)
+                    launched = app_info.launch_app(app_name)
                     if not launched:
                         print('Failure to restore the application named %s '
                               'due to empty commandline [%s]'

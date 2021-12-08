@@ -1,4 +1,5 @@
 from typing import List, Dict
+import re
 
 import gi
 from gi.overrides.Gio import Settings
