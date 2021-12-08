@@ -23,7 +23,10 @@ from .settings.constants import Locations
 from .settings.xsession_config import XSessionConfig, XSessionConfigObject
 from .utils import wmctl_wrapper, subprocess_utils, retry, gio_utils, wnck_utils, snapd_workaround, suppress_output, \
     string_utils
+from .utils.decorators.run_async import run_async
 
+
+restore_lock = multiprocessing.Lock()
 
 class XSessionManager:
 
@@ -55,7 +58,6 @@ class XSessionManager:
         self.restore_app_countdown = -1
 
         self.instance_lock = multiprocessing.Lock()
-        self.restore_lock = multiprocessing.Lock()
 
     def save_session(self, session_name: str, session_filter: SessionFilter = None):
         x_session_config = self.get_session_details(remove_duplicates_by_pid=False,
@@ -205,12 +207,11 @@ class XSessionManager:
                 with wnck_utils.create_enough_workspaces(max_desktop_number):
                     x_session_config_objects_copy.sort(key=attrgetter('memory_percent'), reverse=True)
                     self.restore_app_countdown = len(x_session_config_objects_copy)
-                    restore_thread = self._restore_sessions_async(session_name, restoring_interval, x_session_config_objects_copy)
-                    move_window_thread = self._move_window_while_restore_async(session_name)
-                    restore_thread.join()
-                    move_window_thread.join()
-                print('Done!')
+                    self._restore_sessions(session_name, restoring_interval, x_session_config_objects_copy)
+                    # self._move_window_while_restore(session_name)
+                    self._move_window_while_restore(session_name)
     
+    @run_async
     def _move_window_while_restore(self, session_name):
         # Retry about 2 minutes
         retry_count_down = 60 
@@ -221,8 +222,11 @@ class XSessionManager:
             retry_count_down = retry_count_down - 1
             sleep(1.5)
             self._suppress_log_if_already_in_workspace = True
-            with self.restore_lock:
+            with restore_lock:
+                print('moving windows ' + str(restore_lock))
                 self.move_window(session_name)
+        
+        print('Done!')
             
     def _move_window_while_restore_async(self, session_name):
         t = threading.Thread(target=self._move_window_while_restore, args=(session_name,))
@@ -248,74 +252,82 @@ class XSessionManager:
         self._suppress_log_if_already_in_workspace = True
         self._if_restore_geometry = True
 
-        failed_restores = []
-        succeeded_restores = []
+        # failed_restores = []
         running_session: XSessionConfig = self.get_session_details(remove_duplicates_by_pid=False,
                                                                    session_filters=self.session_filters)
         for index, namespace_obj in enumerate(_x_session_config_objects_copy):
             cmd: list = namespace_obj.cmd
             app_name: str = namespace_obj.app_name
+            namespace_obj.cmd = [c for c in cmd if c != "--gapplication-service"]
             try:
-                is_running = False
-                for running_window in running_session.x_session_config_objects:
-                    if self._is_same_app(running_window, namespace_obj) \
-                            and self._is_same_cmd(running_window.cmd, cmd):
-                        print('%s is running in Workspace %d, skip...' % (app_name, running_window.desktop_number))
-                        is_running = True
-                        with self.instance_lock:
-                            self.restore_app_countdown = self.restore_app_countdown - 1
-                        break
-                if is_running:
-                    continue
-
-                print('Restoring application:              [%s]' % app_name)
-                app_info = gio_utils.GDesktopAppInfo()
-                if len(cmd) == 0:
-                    so = suppress_output.SuppressOutput(True, True)
-                    with so.suppress_output():
-                        launched = app_info.launch_app(app_name)
-                        if not launched:
-                            print('Failure to restore the application named %s '
-                                  'due to empty commandline [%s]'
-                                  % (app_name, str(cmd)))
-                    continue
-
-                namespace_obj.cmd = [c for c in cmd if c != "--gapplication-service"]
-                try:
-                    process = subprocess_utils.launch_app(namespace_obj.cmd)
-                    namespace_obj.pid = process.pid
-                    succeeded_restores.append(index)
-                    self.move_window(session_name)
-
-                    # Wait some time, in case of freezing the entire system
-                    sleep(restoring_interval)
-                except FileNotFoundError as fnfe:
-                    launched = False
-                    part_cmd = namespace_obj.cmd[0]
-                    # Check if this is a Snap application
-                    snapd = snapd_workaround.Snapd()
-                    is_snap_app, snap_app_name = snapd.is_snap_app(part_cmd)
-                    if is_snap_app:
-                        print('%s is a Snap app' % app_name)
-                        launched = snapd.launch_app([snap_app_name])
-
-                    if not launched:
-                        print('Searching %s ...' % app_name)
-                        launched = app_info.launch_app(app_name)
-
-                    if not launched:
-                        raise fnfe
-                    else:
-                        self.move_window(session_name)
-                        print('%s launched' % app_name)
+                p: multiprocessing.Process = self._restore_session(session_name, running_session, namespace_obj)
+                print('%s is alive %s' % (str(p), p.is_alive()))
+                
+                # Wait some time, in case of freezing the entire system
+                sleep(restoring_interval)
             except Exception as e:
-                failed_restores.append(index)
+                # failed_restores.append(index)
                 print(traceback.format_exc())
                 print('Failure to restore the application named %s due to the previous error' % app_name)
 
-        _x_session_config_objects_copy[:] = [o for index, o in enumerate(_x_session_config_objects_copy)
-                                             if index not in failed_restores]
+        # _x_session_config_objects_copy[:] = [o for index, o in enumerate(_x_session_config_objects_copy)
+        #                                      if index not in failed_restores]
 
+    @run_async
+    def _restore_session(self, session_name, running_session, x_session_config_object: XSessionConfigObject):
+        cmd = x_session_config_object.cmd
+        app_name: str = x_session_config_object.app_name
+                
+        with restore_lock:
+            is_running = False
+            for running_window in running_session.x_session_config_objects:
+                if self._is_same_app(running_window, x_session_config_object) \
+                        and self._is_same_cmd(running_window.cmd, cmd):
+                    print('%s is running in Workspace %d, skip...' % (app_name, running_window.desktop_number))
+                    is_running = True
+                    self.restore_app_countdown = self.restore_app_countdown - 1
+                    break
+            if is_running:
+                return
+                
+            print('Restoring application:              [%s]' % app_name)
+            app_info = gio_utils.GDesktopAppInfo()
+            if len(cmd) == 0:
+                so = suppress_output.SuppressOutput(not self.vv, not self.vv)
+                with so.suppress_output():
+                    launched = app_info.launch_app(app_name)
+                if not launched:
+                    print('Failure to restore the application named %s '
+                            'due to empty commandline [%s]'
+                            % (app_name, str(cmd)))
+                return
+
+            try:
+                process = subprocess_utils.launch_app(cmd)
+                x_session_config_object.pid = process.pid
+            
+            except FileNotFoundError as fnfe:
+                launched = False
+                part_cmd = cmd[0]
+                # Check if this is a Snap application
+                snapd = snapd_workaround.Snapd()
+                is_snap_app, snap_app_name = snapd.is_snap_app(part_cmd)
+                if is_snap_app:
+                    print('%s is a Snap app' % app_name)
+                    launched = snapd.launch_app([snap_app_name])
+
+                if not launched:
+                    print('Searching %s ...' % app_name)
+                    launched = app_info.launch_app(app_name)
+
+                if not launched:
+                    raise fnfe
+                
+                print('%s launched' % app_name)
+            
+            print('moving ...' + str(restore_lock))
+            self.move_window(session_name)
+            
     def close_windows(self, including_apps_with_multiple_windows: bool = False):
         sessions: List[XSessionConfigObject] = \
             self.get_session_details(remove_duplicates_by_pid=False,
