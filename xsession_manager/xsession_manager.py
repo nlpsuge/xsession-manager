@@ -248,7 +248,9 @@ class XSessionManager:
                 print('Restoring application:              [%s]' % app_name)
                 app_info = gio_utils.GDesktopAppInfo()
                 if len(cmd) == 0:
-                    launched = app_info.launch_app(app_name)
+                    def launched_callback(cb_data):
+                        namespace_obj.pid = cb_data['pid']
+                    launched = app_info.launch_app(app_name, launched_callback)
                     if not launched:
                         print('Failure to restore the application named %s '
                               'due to empty commandline [%s]'
@@ -268,17 +270,20 @@ class XSessionManager:
                     self.move_window(session_name)
                 except FileNotFoundError as fnfe:
                     launched = False
+                    def launched_callback(cb_data):
+                        namespace_obj.pid = cb_data['pid']
+
                     part_cmd = namespace_obj.cmd[0]
                     # Check if this is a Snap application
                     snapd = snapd_workaround.Snapd()
                     is_snap_app, snap_app_name = snapd.is_snap_app(part_cmd)
                     if is_snap_app:
                         print('%s is a Snap app' % app_name)
-                        launched = snapd.launch_app([snap_app_name])
+                        launched = snapd.launch_app([snap_app_name], launched_callback)
 
                     if not launched:
                         print('Searching %s ...' % app_name)
-                        launched = app_info.launch_app(app_name)
+                        launched = app_info.launch_app(app_name, launched_callback)
 
                     if not launched:
                         raise fnfe

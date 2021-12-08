@@ -70,7 +70,7 @@ class Snapd:
             return True, snap_app_name
         return False, None
 
-    def launch_app(self, app_names: List[str], suppress_stdout=True, suppress_stderr=True) -> bool:
+    def launch_app(self, app_names: List[str], launched_callback, suppress_stdout=True, suppress_stderr=True) -> bool:
         """
         Launch a application according to the app names.
 
@@ -86,6 +86,6 @@ class Snapd:
             df = app['desktop-file']
             so = suppress_output.SuppressOutput(suppress_stdout, suppress_stderr)
             with so.suppress_output():
-                return gio_utils.GDesktopAppInfo().launch_app_via_desktop_file(df)
+                return gio_utils.GDesktopAppInfo().launch_app_via_desktop_file(df, launched_callback)
 
         print('Failed to run apps %s as a Snap app' % app_names)
