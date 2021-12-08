@@ -85,7 +85,8 @@ class GDesktopAppInfo:
 
             so = suppress_output.SuppressOutput(True, True)
             with so.suppress_output():
-                return desktop_app_info.launch()
+                launched = desktop_app_info.launch()
+                return launched
         elif len(desktop_apps) == 0:
             print('No result found according to %s' % app_name)
             return False
@@ -106,7 +107,8 @@ class GDesktopAppInfo:
 
                 so = suppress_output.SuppressOutput(True, True)
                 with so.suppress_output():
-                    return desktop_app_info.launch()
+                    launched = desktop_app_info.launch()
+                    return launched
 
             raise MoreThanOneResultFound('Multiple desktop files (%s) were found according to %s'
                                          % ([desktop_app.app_id for desktop_app in desktop_apps], app_name))

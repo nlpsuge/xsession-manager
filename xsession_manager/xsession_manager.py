@@ -17,6 +17,9 @@ from types import SimpleNamespace as Namespace
 from typing import List, Dict, Any, Union
 
 import psutil
+import gi
+gi.require_version('Gtk', '3.0')
+from gi.repository import Gtk
 
 from .session_filter import SessionFilter
 from .settings.constants import Locations
@@ -250,6 +253,8 @@ class XSessionManager:
                         print('Failure to restore the application named %s '
                               'due to empty commandline [%s]'
                               % (app_name, str(cmd)))
+                    sleep(restoring_interval)
+                    self.move_window(session_name)
                     continue
 
                 try:
@@ -257,10 +262,10 @@ class XSessionManager:
                     process = subprocess_utils.launch_app(namespace_obj.cmd)
                     namespace_obj.pid = process.pid
                     succeeded_restores.append(index)
-                    self.move_window(session_name)
 
                     # Wait some time, in case of freezing the entire system
                     sleep(restoring_interval)
+                    self.move_window(session_name)
                 except FileNotFoundError as fnfe:
                     launched = False
                     part_cmd = namespace_obj.cmd[0]
@@ -279,6 +284,7 @@ class XSessionManager:
                         raise fnfe
 
                     print('%s launched' % app_name)
+                    sleep(restoring_interval)
                     self.move_window(session_name)
 
             except Exception as e:
@@ -299,6 +305,9 @@ class XSessionManager:
             retry_count_down = retry_count_down - 1
             sleep(1.5)
             self._suppress_log_if_already_in_workspace = True
+            # handle pending events
+            while Gtk.events_pending():
+                Gtk.main_iteration()
             self.move_window(session_name)
 
     def close_windows(self, including_apps_with_multiple_windows: bool = False):
