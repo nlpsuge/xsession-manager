@@ -1,4 +1,3 @@
-import threading
 from typing import List, Dict
 
 import gi
@@ -54,9 +53,13 @@ class GDesktopAppInfo:
     def __init__(self):
         # Cache all .desktop files info in this OS
         self._all_desktop_apps_info_cache: List[DesktopAppInfo] = []
+        self._cache_appinfo()
 
-    @staticmethod
-    def launch_app_via_desktop_file(desktop_file_path) -> bool:
+    def _cache_appinfo(self):
+        desktop_apps: List[DesktopAppInfo] = DesktopAppInfo().get_all()
+        self._all_desktop_apps_info_cache = [da for da in desktop_apps if da.should_show()]
+
+    def launch_app_via_desktop_file(self, desktop_file_path) -> bool:
         launcher: DesktopAppInfo = DesktopAppInfo().new_from_filename(desktop_file_path)
         launched = launcher.launch()
         return launched
@@ -113,17 +116,11 @@ class GDesktopAppInfo:
 
         For more information please visit https://gitlab.gnome.org/GNOME/glib/-/issues/2232 and it's related issues.
         """
-
-        with threading.Lock():
-            if len(self._all_desktop_apps_info_cache) == 0:
-                desktop_apps: List[DesktopAppInfo] = DesktopAppInfo().get_all()
-                self._all_desktop_apps_info_cache = desktop_apps
-
         results: List[_DesktopAppInfoObject] = []
         for desktop_app in self._all_desktop_apps_info_cache:
             app_id = desktop_app.get_id()
-            # do substring matching ignoring case
-            if app_name.lower() in app_id.lower():
+            # do whole word matching ignoring case
+            if re.search(r'\b%s\b' % app_name, app_id, flags=re.IGNORECASE):
                 daio = _DesktopAppInfoObject()
                 daio.app_id = app_id
                 daio.commandline = desktop_app.get_commandline()

@@ -47,11 +47,14 @@ class XSessionManager:
         self._suppress_log_if_already_in_workspace = False
         self.opened_window_id_pid: Dict[int, List[int]] = {}
         self.opened_window_id_pid_old: Dict[int, List[int]] = {}
-        self.opened_window_id_pid_lock = threading.RLock()
+
         self._windows_can_not_be_moved: List[XSessionConfigObject] = []
         self._if_restore_geometry = False
         self.verbose = verbose
         self.vv = vv
+        self.restore_app_countdown = -1
+
+        self.instance_lock = threading.Lock()
 
     def save_session(self, session_name: str, session_filter: SessionFilter=None):
         x_session_config = self.get_session_details(remove_duplicates_by_pid=False,
@@ -94,7 +97,7 @@ class XSessionManager:
         x_session_config: XSessionConfig = XSessionConfigObject.convert_wmctl_result_2_list(running_windows,
                                                                                             remove_duplicates_by_pid)
         if self.vv:
-            print('Got the process list according to wmctl: %s' % json.dumps(x_session_config, default=lambda o: o.__dict__))
+            print('Got the running process list according to wmctl: %s' % json.dumps(x_session_config, default=lambda o: o.__dict__))
         x_session_config_objects: List[XSessionConfigObject] = x_session_config.x_session_config_objects
         for idx, sd in enumerate(x_session_config_objects):
             try:
@@ -136,7 +139,7 @@ class XSessionManager:
                     session_filter(x_session_config.x_session_config_objects)
 
         if self.vv:
-            print('Complete the process list according to psutil: %s' %
+            print('Completed the running process list and applied filters: %s' %
                   json.dumps(x_session_config, default=lambda o: o.__dict__))
         return x_session_config
 
@@ -207,6 +210,7 @@ class XSessionManager:
                 max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
                 with wnck_utils.create_enough_workspaces(max_desktop_number):
                     x_session_config_objects_copy.sort(key=attrgetter('memory_percent'), reverse=True)
+                    self.restore_app_countdown = len(x_session_config_objects_copy)
                     restore_thread = restore_sessions_async(x_session_config_objects_copy)
                     restore_thread.join()
                 print('Done!')
@@ -221,7 +225,7 @@ class XSessionManager:
         failed_restores = []
         succeeded_restores = []
         running_session: XSessionConfig = self.get_session_details(remove_duplicates_by_pid=False, 
-                                                                         session_filters=self.session_filters);
+                                                                   session_filters=self.session_filters);
         for index, namespace_obj in enumerate(_x_session_config_objects_copy):
             cmd: list = namespace_obj.cmd
             app_name: str = namespace_obj.app_name
@@ -232,24 +236,27 @@ class XSessionManager:
                             and self._is_same_cmd(running_window.cmd, cmd):
                         print('%s is running in Workspace %d, skip...' % (app_name, running_window.desktop_number))
                         is_running = True
-                        break;
+                        with self.instance_lock:
+                            self.restore_app_countdown = self.restore_app_countdown - 1
+                        break
                 if is_running:
                     continue
                 
                 print('Restoring application:              [%s]' % app_name)
+                app_info = gio_utils.GDesktopAppInfo()
                 if len(cmd) == 0:
-                    so = suppress_output.SuppressOutput(True, True)
+                    so = suppress_output.SuppressOutput(not self.vv, not self.vv)
                     with so.suppress_output():
-                        launched = gio_utils.GDesktopAppInfo().launch_app(app_name)
-                        if not launched:
-                            print('Failure to restore the application named %s '
-                                  'due to empty commandline [%s]'
-                                  % (app_name, str(cmd)))
+                        launched = app_info.launch_app(app_name)
+                    if not launched:
+                        print('Failure to restore the application named %s '
+                              'due to empty commandline [%s]'
+                              % (app_name, str(cmd)))
                     continue
 
-                namespace_obj.cmd = [c for c in cmd if c != "--gapplication-service"]
                 try:
-                    process = subprocess_utils.run_cmd(namespace_obj.cmd)
+                    namespace_obj.cmd = [c for c in cmd if c != "--gapplication-service"]
+                    process = subprocess_utils.launch_app(namespace_obj.cmd)
                     namespace_obj.pid = process.pid
                     succeeded_restores.append(index)
                     self.move_window(session_name)
@@ -264,16 +271,18 @@ class XSessionManager:
                     is_snap_app, snap_app_name = snapd.is_snap_app(part_cmd)
                     if is_snap_app:
                         print('%s is a Snap app' % app_name)
-                        launched = snapd.launch([snap_app_name])
+                        launched = snapd.launch_app([snap_app_name])
 
                     if not launched:
-                        launched = gio_utils.GDesktopAppInfo().launch_app(app_name)
+                        print('Searching %s ...' % app_name)
+                        launched = app_info.launch_app(app_name)
 
                     if not launched:
                         raise fnfe
-                    else:
-                        self.move_window(session_name)
-                        print('%s launched' % app_name)
+
+                    print('%s launched' % app_name)
+                    self.move_window(session_name)
+
             except Exception as e:
                 failed_restores.append(index)
                 print(traceback.format_exc())
@@ -285,6 +294,10 @@ class XSessionManager:
         # Retry about 2 minutes
         retry_count_down = 60
         while retry_count_down > 0:
+            with self.instance_lock:
+                if self.restore_app_countdown <= 0:
+                    break
+
             retry_count_down = retry_count_down - 1
             sleep(1.5)
             self._suppress_log_if_already_in_workspace = True
@@ -388,7 +401,7 @@ class XSessionManager:
                     except:
                         # Eat all exceptions raised here, a process could exist a short while
                         continue
-                    
+
                     if len(cmdline) <= 0:
                         continue
 

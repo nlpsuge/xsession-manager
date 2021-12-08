@@ -8,3 +8,5 @@ def run_cmd(commandline: list):
     # subprocess.DEVNULL only support > 3.3
     return subprocess.Popen(commandline, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
+def launch_app(commandline: list):
+    return run_cmd(commandline)
