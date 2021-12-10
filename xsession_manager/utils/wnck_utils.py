@@ -74,7 +74,7 @@ def get_window(xid: int) -> Wnck.Window:
     screen.force_update()
     window: Wnck.Window = Wnck.Window.get(xid)
     if not window:
-        print('window not found: %s(%s)' % (xid, hex(xid)))
+        # print('window not found: %s(%s)' % (xid, hex(xid)))
         return None
     return window
 
