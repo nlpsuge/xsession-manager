@@ -169,7 +169,7 @@ class XSessionManager:
                     indent=4,
                     sort_keys=True))
 
-    def restore_session(self, session_name, restoring_interval=2):
+    def restore_session(self, session_name, restoring_interval=0.5):
         session_path = Path(self.base_location_of_sessions, session_name)
         if not session_path.exists():
             raise FileNotFoundError('Session file [%s] was not found.' % session_path)
@@ -259,17 +259,14 @@ class XSessionManager:
                     self.move_window(session_name)
                     continue
 
+                launched = False
                 try:
                     namespace_obj.cmd = [c for c in cmd if c != "--gapplication-service"]
                     process = subprocess_utils.launch_app(namespace_obj.cmd)
                     namespace_obj.pid = process.pid
                     succeeded_restores.append(index)
-
-                    # Wait some time, in case of freezing the entire system
-                    sleep(restoring_interval)
-                    self.move_window(session_name)
+                    launched = True
                 except FileNotFoundError as fnfe:
-                    launched = False
                     def launched_callback(cb_data):
                         namespace_obj.pid = cb_data['pid']
 
@@ -288,9 +285,12 @@ class XSessionManager:
                     if not launched:
                         raise fnfe
 
+                if launched:
                     print('%s launched' % app_name)
                     sleep(restoring_interval)
-                    self.move_window(session_name)
+                    if index == len(_x_session_config_objects_copy) - 1 \
+                            or index % 3 == 0: # move windows while every 3 apps launched
+                        self.move_window(session_name)
 
             except Exception as e:
                 failed_restores.append(index)
@@ -301,14 +301,17 @@ class XSessionManager:
                                              if index not in failed_restores]
 
         # Retry about 2 minutes
-        retry_count_down = 60
+        retry_count_down = 30
         while retry_count_down > 0:
+            retry_count_down = retry_count_down - 1
+            if retry_count_down <= 0:
+                break
+            
             with self.instance_lock:
                 if self.restore_app_countdown <= 0:
                     break
 
-            retry_count_down = retry_count_down - 1
-            sleep(1.5)
+            sleep(0.5)
             self._suppress_log_if_already_in_workspace = True
             # handle pending events
             while Gtk.events_pending():
