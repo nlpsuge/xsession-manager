@@ -157,7 +157,7 @@ class ArgumentsHandler():
                 xsm = XSessionManager(verbose=self.args.verbose, vv=self.args.vv)
                 xsm.restore_session(pop_up_a_dialog_to_restore, restoring_interval)
 
-        # Sort sessions based on motification time in ascending order
+        # Sort sessions based on modification time in ascending order
         if list_sessions:
             print()
             session_files = filter(lambda x: os.path.isfile(os.path.join(constants.Locations.BASE_LOCATION_OF_SESSIONS, x)), 
