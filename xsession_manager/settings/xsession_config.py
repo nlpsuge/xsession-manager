@@ -40,6 +40,8 @@ class XSessionConfigObject(Base):
     process_create_time: str
 
     window_state: WindowState
+    
+    windows_count: int
 
     @staticmethod
     def convert_wmctl_result_2_list(windows_list: list, remove_duplicates_by_pid=True) -> XSessionConfig:

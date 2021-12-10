@@ -117,6 +117,8 @@ def make_above(xid: int):
 
 def count_windows(xid: int) -> int:
     screen: Wnck.Screen = Wnck.Screen.get_default()
+    while Gtk.events_pending():
+        Gtk.main_iteration()
     screen.force_update()
     window: Wnck.Window = Wnck.Window.get(xid)
     # Windows may not open yet

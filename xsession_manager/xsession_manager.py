@@ -102,6 +102,7 @@ class XSessionManager:
         if self.vv:
             print('Got the running process list according to wmctl: %s' % json.dumps(x_session_config, default=lambda o: o.__dict__))
         x_session_config_objects: List[XSessionConfigObject] = x_session_config.x_session_config_objects
+        counter: collections.Counter = collections.Counter(window.pid for window in x_session_config_objects)
         for idx, sd in enumerate(x_session_config_objects):
             try:
                 process = psutil.Process(sd.pid)
@@ -114,7 +115,8 @@ class XSessionManager:
                 sd.window_state = sd.WindowState()
                 sd.window_state.is_above = wnck_utils.is_above(sd.window_id_the_int_type)
                 sd.window_state.is_sticky = wnck_utils.is_sticky(sd.window_id_the_int_type)
-
+                sd.windows_count = counter[sd.pid]
+                
                 geometry = wnck_utils.get_geometry(sd.window_id_the_int_type)
                 if geometry is None:
                     sleep(0.25)
@@ -216,8 +218,42 @@ class XSessionManager:
                     self.restore_app_countdown = len(x_session_config_objects_copy)
                     restore_thread = restore_sessions_async(x_session_config_objects_copy)
                     restore_thread.join()
+                    self._move_windows_while_restore(session_name, x_session_config_objects_copy)
                 print('Done!')
 
+    def _move_windows_while_restore(self, session_name, x_session_config_objects_copy: List[XSessionConfigObject]):
+        print(len(x_session_config_objects_copy))
+        retry_count_down = self.calculate_retry_count_down(x_session_config_objects_copy)
+        # Retry some minutes
+        while retry_count_down > 0:
+            # handle pending events
+            while Gtk.events_pending():
+                Gtk.main_iteration()
+
+            retry_count_down = retry_count_down - 1
+            if retry_count_down <= 0:
+                break
+            
+            with self.instance_lock:
+                if self.restore_app_countdown <= 0:
+                    break
+
+            sleep(0.5)
+            self._suppress_log_if_already_in_workspace = True
+            self.move_window(session_name)
+            
+    def calculate_retry_count_down(self, _x_session_config_objects_copy: List[XSessionConfigObject]):
+        retry_count_down = 30
+        window_counts = [s.windows_count for s in _x_session_config_objects_copy 
+                         if hasattr(s, 'windows_count')]
+        if window_counts:
+            max_windows_number = max(window_counts)
+            if max_windows_number == 1:
+                retry_count_down = 5
+        if self.verbose:
+            print('Calculated retry_count_down: %d' % retry_count_down)
+        return retry_count_down
+        
     def _restore_sessions(self,
                           session_name,
                           restoring_interval,
@@ -225,6 +261,7 @@ class XSessionManager:
         self._suppress_log_if_already_in_workspace = True
         self._if_restore_geometry = True
 
+        running_restores = []
         failed_restores = []
         succeeded_restores = []
         running_session: XSessionConfig = self.get_session_details(remove_duplicates_by_pid=False, 
@@ -238,9 +275,12 @@ class XSessionManager:
                     if self._is_same_app(running_window, namespace_obj) \
                             and self._is_same_cmd(running_window.cmd, cmd):
                         print('%s is running in Workspace %d, skip...' % (app_name, running_window.desktop_number))
+                        namespace_obj.pid = running_window.pid
+                        running_restores.append(index)
                         is_running = True
                         with self.instance_lock:
                             self.restore_app_countdown = self.restore_app_countdown - 1
+                        self._move_window(namespace_obj, namespace_obj.pid, False)
                         break
                 if is_running:
                     continue
@@ -298,25 +338,7 @@ class XSessionManager:
                 print('Failure to restore the application named %s due to the previous error' % app_name)
 
         _x_session_config_objects_copy[:] = [o for index, o in enumerate(_x_session_config_objects_copy)
-                                             if index not in failed_restores]
-
-        # Retry about 2 minutes
-        retry_count_down = 30
-        while retry_count_down > 0:
-            retry_count_down = retry_count_down - 1
-            if retry_count_down <= 0:
-                break
-            
-            with self.instance_lock:
-                if self.restore_app_countdown <= 0:
-                    break
-
-            sleep(0.5)
-            self._suppress_log_if_already_in_workspace = True
-            # handle pending events
-            while Gtk.events_pending():
-                Gtk.main_iteration()
-            self.move_window(session_name)
+                                             if index not in failed_restores + running_restores]
 
     def close_windows(self, including_apps_with_multiple_windows: bool = False):
         sessions: List[XSessionConfigObject] = \
