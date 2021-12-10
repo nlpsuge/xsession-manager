@@ -17,6 +17,9 @@ from types import SimpleNamespace as Namespace
 from typing import List, Dict, Any, Union
 
 import psutil
+import gi
+gi.require_version('Gtk', '3.0')
+from gi.repository import Gtk
 
 from .session_filter import SessionFilter
 from .settings.constants import Locations
@@ -33,7 +36,10 @@ class XSessionManager:
     base_location_of_sessions: str
     base_location_of_backup_sessions: str
 
-    def __init__(self, session_filters: List[SessionFilter]=None,
+    def __init__(self, 
+                 verbose: bool,
+                 vv: bool,
+                 session_filters: List[SessionFilter]=None,
                  base_location_of_sessions: str=Locations.BASE_LOCATION_OF_SESSIONS,
                  base_location_of_backup_sessions: str=Locations.BASE_LOCATION_OF_BACKUP_SESSIONS):
         self.session_filters = session_filters
@@ -44,10 +50,14 @@ class XSessionManager:
         self._suppress_log_if_already_in_workspace = False
         self.opened_window_id_pid: Dict[int, List[int]] = {}
         self.opened_window_id_pid_old: Dict[int, List[int]] = {}
-        self.opened_window_id_pid_lock = threading.RLock()
+
         self._windows_can_not_be_moved: List[XSessionConfigObject] = []
         self._if_restore_geometry = False
-        self.silence = False
+        self.verbose = verbose
+        self.vv = vv
+        self.restore_app_countdown = -1
+
+        self.instance_lock = threading.Lock()
 
     def save_session(self, session_name: str, session_filter: SessionFilter=None):
         x_session_config = self.get_session_details(remove_duplicates_by_pid=False,
@@ -67,10 +77,13 @@ class XSessionManager:
         # Save a new session
         x_session_config.session_create_time = datetime.datetime.fromtimestamp(time()).strftime("%Y-%m-%d %H:%M:%S.%f")
         save_session_details_json = json.dumps(x_session_config, default=lambda o: o.__dict__)
-        print('Saving the new json format x session [%s] ' % save_session_details_json)
+        
+        if self.vv:
+            print('Saving the new json format x session [%s] ' % save_session_details_json)
+        
         self.write_session(session_path, save_session_details_json)
         print('Done!')
-
+        
     def get_session_details(self, remove_duplicates_by_pid=True,
                             session_filters: List[SessionFilter]=None) -> XSessionConfig:
 
@@ -86,8 +99,8 @@ class XSessionManager:
         running_windows: list = wmctl_wrapper.get_running_windows()
         x_session_config: XSessionConfig = XSessionConfigObject.convert_wmctl_result_2_list(running_windows,
                                                                                             remove_duplicates_by_pid)
-        if self.silence is False:
-            print('Got the process list according to wmctl: %s' % json.dumps(x_session_config, default=lambda o: o.__dict__))
+        if self.vv:
+            print('Got the running process list according to wmctl: %s' % json.dumps(x_session_config, default=lambda o: o.__dict__))
         x_session_config_objects: List[XSessionConfigObject] = x_session_config.x_session_config_objects
         for idx, sd in enumerate(x_session_config_objects):
             try:
@@ -128,15 +141,14 @@ class XSessionManager:
                 x_session_config.x_session_config_objects[:] = \
                     session_filter(x_session_config.x_session_config_objects)
 
-        if self.silence is False:
-            print('Complete the process list according to psutil: %s' %
+        if self.vv:
+            print('Completed the running process list and applied filters: %s' %
                   json.dumps(x_session_config, default=lambda o: o.__dict__))
         return x_session_config
 
     def backup_session(self, original_session_path):
         backup_time = datetime.datetime.fromtimestamp(time())
         with open(original_session_path, 'r') as file:
-            print('Backing up session located [%s] ' % original_session_path)
             namespace_objs: XSessionConfig = json.load(file, object_hook=lambda d: Namespace(**d))
         current_time_str_as_backup_id = backup_time.strftime("%Y%m%d%H%M%S%f")
         backup_session_path = Path(self.base_location_of_backup_sessions,
@@ -201,6 +213,7 @@ class XSessionManager:
                 max_desktop_number = self._get_max_desktop_number(x_session_config_objects)
                 with wnck_utils.create_enough_workspaces(max_desktop_number):
                     x_session_config_objects_copy.sort(key=attrgetter('memory_percent'), reverse=True)
+                    self.restore_app_countdown = len(x_session_config_objects_copy)
                     restore_thread = restore_sessions_async(x_session_config_objects_copy)
                     restore_thread.join()
                 print('Done!')
@@ -214,48 +227,71 @@ class XSessionManager:
 
         failed_restores = []
         succeeded_restores = []
+        running_session: XSessionConfig = self.get_session_details(remove_duplicates_by_pid=False, 
+                                                                   session_filters=self.session_filters);
         for index, namespace_obj in enumerate(_x_session_config_objects_copy):
             cmd: list = namespace_obj.cmd
             app_name: str = namespace_obj.app_name
             try:
+                is_running = False
+                for running_window in running_session.x_session_config_objects:
+                    if self._is_same_app(running_window, namespace_obj) \
+                            and self._is_same_cmd(running_window.cmd, cmd):
+                        print('%s is running in Workspace %d, skip...' % (app_name, running_window.desktop_number))
+                        is_running = True
+                        with self.instance_lock:
+                            self.restore_app_countdown = self.restore_app_countdown - 1
+                        break
+                if is_running:
+                    continue
+                
                 print('Restoring application:              [%s]' % app_name)
+                app_info = gio_utils.GDesktopAppInfo()
                 if len(cmd) == 0:
-                    so = suppress_output.SuppressOutput(True, True)
-                    with so.suppress_output():
-                        launched = gio_utils.GDesktopAppInfo().launch_app(app_name)
-                        if not launched:
-                            print('Failure to restore the application named %s '
-                                  'due to empty commandline [%s]'
-                                  % (app_name, str(cmd)))
+                    def launched_callback(cb_data):
+                        namespace_obj.pid = cb_data['pid']
+                    launched = app_info.launch_app(app_name, launched_callback)
+                    if not launched:
+                        print('Failure to restore the application named %s '
+                              'due to empty commandline [%s]'
+                              % (app_name, str(cmd)))
+                    sleep(restoring_interval)
+                    self.move_window(session_name)
                     continue
 
-                namespace_obj.cmd = [c for c in cmd if c != "--gapplication-service"]
                 try:
-                    process = subprocess_utils.run_cmd(namespace_obj.cmd)
+                    namespace_obj.cmd = [c for c in cmd if c != "--gapplication-service"]
+                    process = subprocess_utils.launch_app(namespace_obj.cmd)
                     namespace_obj.pid = process.pid
                     succeeded_restores.append(index)
-                    self.move_window(session_name)
 
                     # Wait some time, in case of freezing the entire system
                     sleep(restoring_interval)
+                    self.move_window(session_name)
                 except FileNotFoundError as fnfe:
                     launched = False
+                    def launched_callback(cb_data):
+                        namespace_obj.pid = cb_data['pid']
+
                     part_cmd = namespace_obj.cmd[0]
                     # Check if this is a Snap application
                     snapd = snapd_workaround.Snapd()
                     is_snap_app, snap_app_name = snapd.is_snap_app(part_cmd)
                     if is_snap_app:
                         print('%s is a Snap app' % app_name)
-                        launched = snapd.launch([snap_app_name])
+                        launched = snapd.launch_app([snap_app_name], launched_callback)
 
                     if not launched:
-                        launched = gio_utils.GDesktopAppInfo().launch_app(app_name)
+                        print('Searching %s ...' % app_name)
+                        launched = app_info.launch_app(app_name, launched_callback)
 
                     if not launched:
                         raise fnfe
-                    else:
-                        self.move_window(session_name)
-                        print('%s launched' % app_name)
+
+                    print('%s launched' % app_name)
+                    sleep(restoring_interval)
+                    self.move_window(session_name)
+
             except Exception as e:
                 failed_restores.append(index)
                 print(traceback.format_exc())
@@ -267,9 +303,16 @@ class XSessionManager:
         # Retry about 2 minutes
         retry_count_down = 60
         while retry_count_down > 0:
+            with self.instance_lock:
+                if self.restore_app_countdown <= 0:
+                    break
+
             retry_count_down = retry_count_down - 1
             sleep(1.5)
             self._suppress_log_if_already_in_workspace = True
+            # handle pending events
+            while Gtk.events_pending():
+                Gtk.main_iteration()
             self.move_window(session_name)
 
     def close_windows(self, including_apps_with_multiple_windows: bool = False):
@@ -365,10 +408,16 @@ class XSessionManager:
                     return
 
                 for p in psutil.process_iter(attrs=['pid', 'cmdline']):
-                    if len(p.cmdline()) <= 0:
+                    try:
+                        cmdline: list = p.cmdline()
+                    except:
+                        # Eat all exceptions raised here, a process could exist a short while
                         continue
 
-                    if self._is_same_cmd(p, cmd):
+                    if len(cmdline) <= 0:
+                        continue
+
+                    if self._is_same_cmd(cmdline, cmd):
                         pids.append(p.pid)
 
             if len(pids) == 0:
@@ -474,23 +523,34 @@ class XSessionManager:
             if window_state.is_above:
                 wnck_utils.make_above(window_id_the_int_type)
 
-    def _is_same_window(self, window1: XSessionConfigObject, window2: XSessionConfigObject):
+    def _is_same_app(self, running_window1: XSessionConfigObject, window2: XSessionConfigObject):
+        app_name1 = wnck_utils.get_app_name(running_window1.window_id_the_int_type)
+        app_name2 = window2.app_name
+        if string_utils.empty_string(app_name1) \
+                or string_utils.empty_string(app_name2):
+            return False
+        return app_name1 == app_name2
+    
+    def _is_same_window(self, running_window1: XSessionConfigObject, window2: XSessionConfigObject):
         # Deal with JetBrains products. Move the window if they are the same project.
-        app_name1 = wnck_utils.get_app_name(window1.window_id_the_int_type)
+        app_name1 = wnck_utils.get_app_name(running_window1.window_id_the_int_type)
         app_name2 = window2.app_name
         if app_name1 == app_name2 and app_name1.startswith('jetbrains-'):
-            return window1.window_title.split(' ')[0] == window2.window_title.split(' ')[0]
+            return running_window1.window_title.split(' ')[0] == window2.window_title.split(' ')[0]
 
-        if window1.window_title == window2.window_title:
+        if running_window1.window_title == window2.window_title:
             return True
 
         return False
 
-    def _is_same_cmd(self, p: psutil.Process, second_cmd: List):
-        first_cmdline = [c for c in p.cmdline() if (c != "--gapplication-service" and not c.startswith('--pid='))]
+    def _is_same_cmd(self, first_cmdline: List, second_cmd: List):
+        first_cmdline = [c for c in first_cmdline if (c != "--gapplication-service" and not c.startswith('--pid='))]
         second_cmd = [c for c in second_cmd if (c != "--gapplication-service" and not c.startswith('--pid='))]
+        if len(first_cmdline) == 0 and len(second_cmd) == 0:
+            return True
+        
         if len(first_cmdline) <= 0 or len(second_cmd) <= 0:
-            return
+            return False
 
         first_one_is_snap_app, first_snap_app_name = snapd_workaround.Snapd.is_snap_app(first_cmdline[0])
         if first_one_is_snap_app:

@@ -1,6 +1,7 @@
 # Note: Wnck may not works in Wayland
 from contextlib import contextmanager
 from time import time
+from typing import Tuple
 
 from . import gio_utils
 
@@ -50,6 +51,9 @@ def get_workspace_count():
 
 def get_app_name(xid: int) -> str:
     window = get_window(xid)
+    if not window:
+        return ''
+    
     # See: https://developer.gnome.org/libwnck/stable/WnckWindow.html#wnck-window-get-class-group-name
     # See: https://tronche.com/gui/x/icccm/sec-4.html#WM_CLASS
     name = window.get_class_group_name()
@@ -69,6 +73,9 @@ def get_window(xid: int) -> Wnck.Window:
         Gtk.main_iteration()
     screen.force_update()
     window: Wnck.Window = Wnck.Window.get(xid)
+    if not window:
+        print('window not found: %s(%s)' % (xid, hex(xid)))
+        return None
     return window
 
 
@@ -102,6 +109,8 @@ def is_above(xid: int) -> bool:
 
 def make_above(xid: int):
     window: Wnck.Window = get_window(xid)
+    if not window:
+        return
     window.make_above()
 
 
@@ -117,7 +126,7 @@ def count_windows(xid: int) -> int:
     return app.get_n_windows()
 
 
-def get_geometry(xid: int) -> (int, int, int, int):
+def get_geometry(xid: int) -> Tuple[int, int, int, int]:
     window = get_window(xid)
     if window:
         geometry = window.get_geometry()

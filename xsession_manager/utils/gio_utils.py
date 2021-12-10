@@ -1,9 +1,12 @@
-import threading
 from typing import List, Dict
+import re
 
 import gi
 from gi.overrides.Gio import Settings
 from gi.repository.Gio import DesktopAppInfo
+from gi.repository.Gio import AppLaunchContext
+gi.require_version('Gdk', '3.0')
+from gi.repository import Gdk
 
 from ..settings import constants
 from . import suppress_output
@@ -54,14 +57,29 @@ class GDesktopAppInfo:
     def __init__(self):
         # Cache all .desktop files info in this OS
         self._all_desktop_apps_info_cache: List[DesktopAppInfo] = []
+        self._cache_appinfo()
 
-    @staticmethod
-    def launch_app_via_desktop_file(desktop_file_path) -> bool:
-        launcher: DesktopAppInfo = DesktopAppInfo().new_from_filename(desktop_file_path)
-        launched = launcher.launch()
+    def _cache_appinfo(self):
+        desktop_apps: List[DesktopAppInfo] = DesktopAppInfo().get_all()
+        self._all_desktop_apps_info_cache = [da for da in desktop_apps if da.should_show()]
+
+    def launch_app_via_desktop_file(self, desktop_file_path, launched_callback) -> bool:
+        app_launch_context = self._get_app_launch_context(launched_callback)
+        app_info: DesktopAppInfo = DesktopAppInfo().new_from_filename(desktop_file_path)
+        launched = app_info.launch(None, app_launch_context)
         return launched
 
-    def launch_app(self, app_name: str) -> bool:
+    def _get_app_launch_context(self, launched_callback) -> AppLaunchContext:
+        # For platform_data, the document said:
+        # On UNIX, at least the “pid” and “startup-notification-id” keys will be present.
+        def launched_cb(app_launch_context, info, platform_data):
+            launched_callback(platform_data)
+                
+        app_launch_context = Gdk.Display.get_default().get_app_launch_context();
+        app_launch_context.connect('launched', launched_cb)
+        return app_launch_context
+
+    def launch_app(self, app_name: str, launched_callback) -> bool:
         """
         Launch an app according to a name by performing fuzzy string searching.
 
@@ -78,10 +96,12 @@ class GDesktopAppInfo:
             if desktop_app_info is None:
                 print('No valid result found according to %s' % app_name)
                 return False
-
+            
+            app_launch_context = self._get_app_launch_context(launched_callback)
             so = suppress_output.SuppressOutput(True, True)
             with so.suppress_output():
-                return desktop_app_info.launch()
+                launched = desktop_app_info.launch(None, app_launch_context)
+                return launched
         elif len(desktop_apps) == 0:
             print('No result found according to %s' % app_name)
             return False
@@ -102,7 +122,8 @@ class GDesktopAppInfo:
 
                 so = suppress_output.SuppressOutput(True, True)
                 with so.suppress_output():
-                    return desktop_app_info.launch()
+                    launched = desktop_app_info.launch(None, self._app_launch_context)
+                    return launched
 
             raise MoreThanOneResultFound('Multiple desktop files (%s) were found according to %s'
                                          % ([desktop_app.app_id for desktop_app in desktop_apps], app_name))
@@ -113,17 +134,11 @@ class GDesktopAppInfo:
 
         For more information please visit https://gitlab.gnome.org/GNOME/glib/-/issues/2232 and it's related issues.
         """
-
-        with threading.Lock():
-            if len(self._all_desktop_apps_info_cache) == 0:
-                desktop_apps: List[DesktopAppInfo] = DesktopAppInfo().get_all()
-                self._all_desktop_apps_info_cache = desktop_apps
-
         results: List[_DesktopAppInfoObject] = []
         for desktop_app in self._all_desktop_apps_info_cache:
             app_id = desktop_app.get_id()
-            # do substring matching ignoring case
-            if app_name.lower() in app_id.lower():
+            # do whole word matching ignoring case
+            if re.search(r'\b%s\b' % app_name, app_id, flags=re.IGNORECASE):
                 daio = _DesktopAppInfoObject()
                 daio.app_id = app_id
                 daio.commandline = desktop_app.get_commandline()
