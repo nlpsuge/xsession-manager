@@ -64,6 +64,9 @@ def get_app_name(xid: int) -> str:
 def get_window(xid: int) -> Wnck.Window:
     get_screen()
     window: Wnck.Window = Wnck.Window.get(xid)
+    if not window:
+        print('window not found: %s(%s)' % (xid, hex(xid)))
+        return None
     return window
 
 
@@ -97,6 +100,8 @@ def is_above(xid: int) -> bool:
 
 def make_above(xid: int):
     window: Wnck.Window = get_window(xid)
+    if not window:
+        return
     window.make_above()
 
 
