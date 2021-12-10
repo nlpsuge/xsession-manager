@@ -4,6 +4,7 @@ import gi
 import psutil
 
 from utils import snapd_workaround
+from xsession_manager.utils import wnck_utils
 
 gi.require_version('Wnck', '3.0')
 from gi.repository import Wnck
@@ -11,8 +12,7 @@ from gi.repository import Wnck
 
 def get_all_snap_processes() -> List[str]:
     print()
-    screen: Wnck.Screen = Wnck.Screen.get_default()
-    screen.force_update()
+    screen: Wnck.Screen = wnck_utils.get_screen()
     windows: List[Wnck.Window] = screen.get_windows()
     snap_processes = []
     for w in windows:

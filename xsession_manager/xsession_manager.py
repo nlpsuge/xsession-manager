@@ -56,6 +56,7 @@ class XSessionManager:
         self.verbose = verbose
         self.vv = vv
         self.restore_app_countdown = -1
+        self.move_window_countdown = -1
 
         self.instance_lock = threading.Lock()
 
@@ -182,16 +183,19 @@ class XSessionManager:
             # Launch APPs in the child process
             if pid == 0:
                 x_session_config_objects: List[XSessionConfigObject] = namespace_objs.x_session_config_objects
-                # Remove duplicates according to pid
-                session_details_dict = {x_session_config.pid: x_session_config
-                                        for x_session_config in x_session_config_objects}
-                x_session_config_objects = list(session_details_dict.values())
+                
                 if self.session_filters is not None:
                     for session_filter in self.session_filters:
                         if session_filter is None:
                             continue
                         x_session_config_objects[:] = session_filter(x_session_config_objects)
-
+                
+                self.move_window_countdown = len(x_session_config_objects)
+                # Remove duplicates according to pid
+                session_details_dict = {x_session_config.pid: x_session_config
+                                        for x_session_config in x_session_config_objects}
+                x_session_config_objects = list(session_details_dict.values())
+                
                 if len(x_session_config_objects) == 0:
                     print('No application to restore.')
                     print('Done!')
@@ -215,7 +219,9 @@ class XSessionManager:
                     x_session_config_objects_copy.sort(key=attrgetter('memory_percent'), reverse=True)
                     self.restore_app_countdown = len(x_session_config_objects_copy)
                     restore_thread = restore_sessions_async(x_session_config_objects_copy)
+                    t= self._move_windows_while_restore_async(session_name, x_session_config_objects_copy)
                     restore_thread.join()
+                    t.join()
                 print('Done!')
 
     def _restore_sessions(self,
@@ -227,70 +233,75 @@ class XSessionManager:
 
         failed_restores = []
         succeeded_restores = []
-        running_session: XSessionConfig = self.get_session_details(remove_duplicates_by_pid=False, 
-                                                                   session_filters=self.session_filters);
         for index, namespace_obj in enumerate(_x_session_config_objects_copy):
             cmd: list = namespace_obj.cmd
             app_name: str = namespace_obj.app_name
             try:
-                is_running = False
-                for running_window in running_session.x_session_config_objects:
-                    if self._is_same_app(running_window, namespace_obj) \
-                            and self._is_same_cmd(running_window.cmd, cmd):
-                        print('%s is running in Workspace %d, skip...' % (app_name, running_window.desktop_number))
-                        is_running = True
-                        with self.instance_lock:
+                with self.instance_lock:
+                    is_running = False
+                    running_session: XSessionConfig = self.get_session_details(remove_duplicates_by_pid=False,
+                                                                               session_filters=self.session_filters)
+                    for running_window in running_session.x_session_config_objects:
+                        if self._is_same_app(running_window, namespace_obj) \
+                                and self._is_same_cmd(running_window.cmd, cmd):
+                            print('%s is running in Workspace %d, skip...' % (app_name, running_window.desktop_number))
+                            is_running = True
                             self.restore_app_countdown = self.restore_app_countdown - 1
-                        break
-                if is_running:
-                    continue
-                
-                print('Restoring application:              [%s]' % app_name)
-                app_info = gio_utils.GDesktopAppInfo()
-                if len(cmd) == 0:
-                    def launched_callback(cb_data):
-                        namespace_obj.pid = cb_data['pid']
-                    launched = app_info.launch_app(app_name, launched_callback)
-                    if not launched:
-                        print('Failure to restore the application named %s '
-                              'due to empty commandline [%s]'
-                              % (app_name, str(cmd)))
-                    sleep(restoring_interval)
-                    self.move_window(session_name)
-                    continue
-
-                try:
-                    namespace_obj.cmd = [c for c in cmd if c != "--gapplication-service"]
-                    process = subprocess_utils.launch_app(namespace_obj.cmd)
-                    namespace_obj.pid = process.pid
-                    succeeded_restores.append(index)
-
-                    # Wait some time, in case of freezing the entire system
-                    sleep(restoring_interval)
-                    self.move_window(session_name)
-                except FileNotFoundError as fnfe:
-                    launched = False
-                    def launched_callback(cb_data):
-                        namespace_obj.pid = cb_data['pid']
-
-                    part_cmd = namespace_obj.cmd[0]
-                    # Check if this is a Snap application
-                    snapd = snapd_workaround.Snapd()
-                    is_snap_app, snap_app_name = snapd.is_snap_app(part_cmd)
-                    if is_snap_app:
-                        print('%s is a Snap app' % app_name)
-                        launched = snapd.launch_app([snap_app_name], launched_callback)
-
-                    if not launched:
-                        print('Searching %s ...' % app_name)
+                            break
+                    if is_running:
+                        continue
+                    
+                    print('Restoring application:              [%s]' % app_name)
+                    app_info = gio_utils.GDesktopAppInfo()
+                    if len(cmd) == 0:
+                        def launched_callback(cb_data):
+                            namespace_obj.pid = cb_data['pid']
                         launched = app_info.launch_app(app_name, launched_callback)
+                        if not launched:
+                            print('Failure to restore the application named %s '
+                                    'due to empty commandline [%s]'
+                                    % (app_name, str(cmd)))
+                        sleep(restoring_interval)
+                        # self.move_window(session_name)
+                        continue
 
-                    if not launched:
-                        raise fnfe
+                    try:
+                        namespace_obj.cmd = [c for c in cmd if c != "--gapplication-service"]
+                        process = subprocess_utils.launch_app(namespace_obj.cmd)
+                        namespace_obj.pid = process.pid
+                        
+                        succeeded_restores.append(index)
 
-                    print('%s launched' % app_name)
-                    sleep(restoring_interval)
-                    self.move_window(session_name)
+                        # Wait some time, in case of freezing the entire system
+                        sleep(restoring_interval)
+                        # self.move_window(session_name)
+                    except FileNotFoundError as fnfe:
+                        launched = False
+                        def launched_callback(cb_data):
+                            namespace_obj.pid = cb_data['pid']
+
+                        part_cmd = namespace_obj.cmd[0]
+                        # Check if this is a Snap application
+                        snapd = snapd_workaround.Snapd()
+                        is_snap_app, snap_app_name = snapd.is_snap_app(part_cmd)
+                        if is_snap_app:
+                            print('%s is a Snap app' % app_name)
+                            launched = snapd.launch_app([snap_app_name], launched_callback)
+
+                        if not launched:
+                            print('Searching %s ...' % app_name)
+                            launched = app_info.launch_app(app_name, launched_callback)
+
+                        if not launched:
+                            raise fnfe
+
+                        print('%s launched' % app_name)
+                        sleep(restoring_interval)
+                        # self.move_window(session_name)
+                    
+                    # handle pending events
+                    while Gtk.events_pending():
+                        Gtk.main_iteration()
 
             except Exception as e:
                 failed_restores.append(index)
@@ -300,20 +311,68 @@ class XSessionManager:
         _x_session_config_objects_copy[:] = [o for index, o in enumerate(_x_session_config_objects_copy)
                                              if index not in failed_restores]
 
-        # Retry about 2 minutes
-        retry_count_down = 60
-        while retry_count_down > 0:
-            with self.instance_lock:
-                if self.restore_app_countdown <= 0:
-                    break
+    
+    def _move_windows_while_restore_async(self, session_name, x_session_config_objects_copy: List[XSessionConfigObject]):
+        if self.verbose:
+            print('Pareparing to move windows while restore')
+            
+        # Add this lock to fix:
+        # Wnck-CRITICAL update_client_list: assertion 'reentrancy_guard == 0' failed
+        # which is caused by Wnck.Screen#force_update()
+        with self.instance_lock:
+            def _move_windows_while_restore(screen, opened_window):
+                with self.instance_lock:
+                    application = opened_window.get_application()
+                    pid = application.get_pid()
+                    for app in x_session_config_objects_copy:
+                        if pid != app.pid:
+                            continue
+                        
+                        self._move_window(app, pid, False)
+                    
+                    if self.move_window_countdown <= 0:
+                        # handle pending events
+                        # while Gtk.events_pending():
+                        #     Gtk.main_iteration()
+                        Gtk.main_quit()
+            
+            screen = wnck_utils.get_screen()
+            screen.connect('window-opened', _move_windows_while_restore)
+            def quit():
+                
+                with self.instance_lock:
+                    while True:
+                        sleep(1)
+                        if opened['opened']:
+                            break
+                    print('calling quit %s' % window_opened_id)
+            
+                # screen.disconnect(window_opened_id)
+                Gtk.main_quit()
+            threading.Thread(target=quit).start()
+        
+        Gtk.main()
+    
+    def _move_windows_while_restore_async1(self, session_name):
+        def _move_windows_while_restore():
+            # Retry about 2 minutes
+            retry_count_down = 60
+            while retry_count_down > 0:
+                with self.instance_lock:
+                    if self.restore_app_countdown <= 0:
+                        break
 
-            retry_count_down = retry_count_down - 1
-            sleep(1.5)
-            self._suppress_log_if_already_in_workspace = True
-            # handle pending events
-            while Gtk.events_pending():
-                Gtk.main_iteration()
-            self.move_window(session_name)
+                    retry_count_down = retry_count_down - 1
+                    sleep(1.5)
+                    self._suppress_log_if_already_in_workspace = True
+                    # handle pending events
+                    while Gtk.events_pending():
+                        Gtk.main_iteration()
+                    self.move_window(session_name)
+        t = threading.Thread(target=_move_windows_while_restore)
+        t.start()
+        return t
+        
 
     def close_windows(self, including_apps_with_multiple_windows: bool = False):
         sessions: List[XSessionConfigObject] = \
@@ -455,6 +514,9 @@ class XSessionManager:
                                 # Record windows which are in it's Workspace already, so that we don't handle it later.
                                 if running_window.window_id not in self._moved_windowids_cache:
                                     self._moved_windowids_cache.append(running_window.window_id)
+                                
+                                with self.instance_lock:
+                                    self.move_window_countdown = self.move_window_countdown - 1
                             continue
                         moving_windows.append(running_window)
                         no_need_to_move = False
@@ -476,10 +538,12 @@ class XSessionManager:
                 window_title = running_window.window_title
                 if string_utils.empty_string(window_title):
                     window_title = wnck_utils.get_app_name(window_id_the_int_type)
-                print('Moving window to desktop:           [%s : %s]' % (window_title, desktop_number))
                 # wmctl_wrapper.move_window_to(running_window_id, str(desktop_number))
                 is_sticky = wnck_utils.is_sticky(window_id_the_int_type)
+                print('Moving window to desktop:           [%s : %s]' % (window_title, desktop_number))
                 wnck_utils.move_window_to(window_id_the_int_type, desktop_number)
+                if self.verbose:
+                    print('Moved window to desktop:           [%s : %s]' % (window_title, desktop_number))
                 # Wait some time for processing event completely, no guarantee though
                 sleep(0.25)
 
@@ -489,6 +553,9 @@ class XSessionManager:
                     wnck_utils.stick(window_id_the_int_type)
 
                 self._restore_geometry(saved_window)
+                
+                with self.instance_lock:
+                    self.move_window_countdown = self.move_window_countdown - 1
 
         except retry.NeedRetryException as ne:
             raise ne

@@ -2,6 +2,7 @@
 from contextlib import contextmanager
 from time import time
 from typing import Tuple
+import threading
 
 from . import gio_utils
 
@@ -20,11 +21,7 @@ def close_window_gracefully_async(window_id: int):
 
 
 def move_window_to(window_id, desktop_number):
-    screen: Wnck.Screen = Wnck.Screen.get_default()
-    # In case that cannot get the Wnck.Workspace instance
-    while Gtk.events_pending():
-        Gtk.main_iteration()
-    screen.force_update()
+    screen: Wnck.Screen = get_screen()
     ws = screen.get_workspace(desktop_number)
     if ws is None:
         print('Workspace %d not found!' % desktop_number)
@@ -35,8 +32,7 @@ def move_window_to(window_id, desktop_number):
 
 
 def is_gnome() -> bool:
-    screen: Wnck.Screen = Wnck.Screen.get_default()
-    screen.force_update()
+    screen: Wnck.Screen = get_screen()
     wmn = screen.get_window_manager_name()
     if wmn == 'GNOME Shell':
         return True
@@ -44,8 +40,7 @@ def is_gnome() -> bool:
 
 
 def get_workspace_count():
-    screen: Wnck.Screen = Wnck.Screen.get_default()
-    screen.force_update()
+    screen: Wnck.Screen = get_screen()
     return screen.get_workspace_count()
 
 
@@ -67,11 +62,7 @@ def get_app_name(xid: int) -> str:
 
 
 def get_window(xid: int) -> Wnck.Window:
-    screen: Wnck.Screen = Wnck.Screen.get_default()
-    # In case that cannot get the window according to xid
-    while Gtk.events_pending():
-        Gtk.main_iteration()
-    screen.force_update()
+    get_screen()
     window: Wnck.Window = Wnck.Window.get(xid)
     return window
 
@@ -110,8 +101,7 @@ def make_above(xid: int):
 
 
 def count_windows(xid: int) -> int:
-    screen: Wnck.Screen = Wnck.Screen.get_default()
-    screen.force_update()
+    screen: Wnck.Screen = get_screen()
     window: Wnck.Window = Wnck.Window.get(xid)
     # Windows may not open yet
     if window is None:
@@ -186,3 +176,28 @@ def create_enough_workspaces(max_desktop_number: int):
             yield
     else:
         yield
+
+
+def get_desktop_number(xid: int) -> int:
+    window: Wnck.Window = get_window(xid)
+    if not window:
+        return None
+    workspace: Wnck.Workspace = window.get_workspace()
+    if not workspace:
+        return None
+    return workspace.get_number()
+
+global screen_force_update_lock
+screen_force_update_lock = threading.Lock()
+def get_screen() -> Wnck.Screen:
+    with screen_force_update_lock:
+        from inspect import stack
+        print('%s is getting screen... %s ' % (stack()[1].function, screen_force_update_lock))
+        for s in stack():
+            print(s)
+        screen: Wnck.Screen = Wnck.Screen.get_default()
+        while Gtk.events_pending():
+            Gtk.main_iteration()        
+        screen.force_update()
+        return screen
+
