@@ -85,49 +85,39 @@ xsm -t xsession-default
 ## Full usage:
 
 ```
-usage: xsm [-h] [-s [SAVE]] [-c [CLOSE_ALL ...]] [-im] [-r [RESTORE]]
-           [-ri RESTORING_INTERVAL] [-pr [PR]] [-l] [-t [DETAIL]]
-           [-x EXCLUDE [EXCLUDE ...]] [-i INCLUDE [INCLUDE ...]]
-           [-ma [MOVE_AUTOMATICALLY]] [-v]
+usage: xsm [-h] [-s [SAVE]] [-c [CLOSE_ALL ...]] [-im] [-r [RESTORE]] [-ri RESTORING_INTERVAL] [-pr [PR]] [-l] [-t [DETAIL]]
+           [-x EXCLUDE [EXCLUDE ...]] [-i INCLUDE [INCLUDE ...]] [-ma [MOVE_AUTOMATICALLY]] [--version] [-v] [-vv]
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   -s [SAVE], --save [SAVE]
-                        Save the current session. Save to the default session
-                        if not specified a session name.
+                        Save the current session. Save to the default session if not specified a session name.
   -c [CLOSE_ALL ...], --close-all [CLOSE_ALL ...]
-                        Close the windows gracefully. Close all windows if
-                        only -c/--close-all is present. You can specify
-                        arguments to tell me which windows should be closed,
-                        that is <window_id>, <pid>, <app_name> or <title_name>
-                        exactly the same as -x.
+                        Close the windows gracefully. Close all windows if only -c/--close-all is present. You can specify
+                        arguments to tell me which windows should be closed, that is <window_id>, <pid>, <app_name> or
+                        <title_name> exactly the same as -x.
   -im, --including-apps-with-multiple-windows
-                        Close the windows gracefully including apps with
-                        multiple windows
+                        Close the windows gracefully including apps with multiple windows
   -r [RESTORE], --restore [RESTORE]
-                        Restore a session gracefully. Restore the default
-                        session if not specified a session name.
+                        Restore a session gracefully. Restore the default session if not specified a session name.
   -ri RESTORING_INTERVAL, --restoring-interval RESTORING_INTERVAL
-                        Specify the interval between restoring applications,
-                        in seconds. The default is 2 seconds.
-  -pr [PR]              Pop up a dialog to ask user whether to restore a X
-                        session.
+                        Specify the interval between restoring applications, in seconds. The default is 2 seconds.
+  -pr [PR]              Pop up a dialog to ask user whether to restore a X session.
   -l, --list            List the sessions.
   -t [DETAIL], --detail [DETAIL]
                         Check out the details of a session.
   -x EXCLUDE [EXCLUDE ...], --exclude EXCLUDE [EXCLUDE ...]
-                        Exclude apps from the operation according to
-                        <window_id>, <pid>, <app_name> or <title_name>.
-                        Require at least one value
+                        Exclude apps from the operation according to <window_id>, <pid>, <app_name> or <title_name>. Require
+                        at least one value
   -i INCLUDE [INCLUDE ...], --include INCLUDE [INCLUDE ...]
-                        Include apps from the operation according to
-                        <window_id>, <pid>, <app_name> or <title_name>.
-                        Require at least one value
+                        Include apps from the operation according to <window_id>, <pid>, <app_name> or <title_name>. Require
+                        at least one value
   -ma [MOVE_AUTOMATICALLY], --move-automatically [MOVE_AUTOMATICALLY]
-                        Auto move windows to specified workspaces according to
-                        a saved session. The default session is `xsession-
-                        default`
-  -v, --version         show program's version number and exit
+                        Auto move windows to specified workspaces according to a saved session. The default session is
+                        `xsession-default`
+  --version             show program's version number and exit
+  -v, --verbose         Print debugging information
+  -vv                   Print more debugging information, could contain sensitive info
 
 ```
 
