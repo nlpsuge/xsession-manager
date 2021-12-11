@@ -42,6 +42,9 @@ class XSessionConfigObject(Base):
     window_state: WindowState
     
     windows_count: int
+    
+    cpu_percent: float
+    memory_percent: float
 
     @staticmethod
     def convert_wmctl_result_2_list(windows_list: list, remove_duplicates_by_pid=True) -> XSessionConfig:
