@@ -230,24 +230,24 @@ class XSessionManager:
                 Gtk.main_iteration()
 
             retry_count_down = retry_count_down - 1
-            if retry_count_down <= 0:
-                break
-            
+
+            self._suppress_log_if_already_in_workspace = True
+            self.move_window(session_name)
+
             with self.instance_lock:
                 if self.restore_app_countdown <= 0:
                     break
-
-            sleep(0.5)
-            self._suppress_log_if_already_in_workspace = True
-            self.move_window(session_name)
             
-    def calculate_retry_count_down(self, _x_session_config_objects_copy: List[XSessionConfigObject]):
+    def calculate_retry_count_down(self, _x_session_config_objects_copy: List[XSessionConfigObject]) -> int:
         retry_count_down = 30
-        max_windows_count_app = max(_x_session_config_objects_copy, key=lambda x: x.windows_count 
-                                                if hasattr(x, 'windows_count') else -1)
-        if hasattr(max_windows_count_app, 'windows_count') \
-                and max_windows_count_app.windows_count == 1:
-            retry_count_down = 5
+        if not _x_session_config_objects_copy:
+            retry_count_down = 1
+        else:
+            max_windows_count_app = max(_x_session_config_objects_copy, key=lambda x: x.windows_count 
+                                                    if hasattr(x, 'windows_count') else -1)
+            if hasattr(max_windows_count_app, 'windows_count') \
+                    and max_windows_count_app.windows_count == 1:
+                retry_count_down = 5
         if self.verbose:
             print('Calculated retry_count_down: %d' % retry_count_down)
         return retry_count_down
@@ -278,7 +278,6 @@ class XSessionManager:
                         is_running = True
                         with self.instance_lock:
                             self.restore_app_countdown = self.restore_app_countdown - 1
-                        self._move_window(namespace_obj, namespace_obj.pid, False)
                         break
                 if is_running:
                     continue
