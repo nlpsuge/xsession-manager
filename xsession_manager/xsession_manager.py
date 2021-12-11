@@ -239,7 +239,7 @@ class XSessionManager:
                     break
             
     def calculate_retry_count_down(self, _x_session_config_objects_copy: List[XSessionConfigObject]) -> int:
-        retry_count_down = 30
+        retry_count_down = 15
         if not _x_session_config_objects_copy:
             retry_count_down = 1
         else:
