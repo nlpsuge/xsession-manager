@@ -570,8 +570,10 @@ class XSessionManager:
         return False
 
     def _is_same_cmd(self, first_cmdline: List, second_cmd: List):
-        first_cmdline = [c for c in first_cmdline if (c != "--gapplication-service" and not c.startswith('--pid='))]
-        second_cmd = [c for c in second_cmd if (c != "--gapplication-service" and not c.startswith('--pid='))]
+        # Remove consecutive duplicates
+        # The args could be duplicated in some apps, like Chromium-based browsers, such as Microsoft Edge 96.0.1054.43, eg: msedge --enable-crashpad --enable-crashpad
+        first_cmdline = [c[0] for c in groupby(first_cmdline) if (c[0] != "--gapplication-service" and not c[0].startswith('--pid='))]
+        second_cmd = [c[0] for c in groupby(second_cmd) if (c[0] != "--gapplication-service" and not c[0].startswith('--pid='))]
         if len(first_cmdline) == 0 and len(second_cmd) == 0:
             return True
         
