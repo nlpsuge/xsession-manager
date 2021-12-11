@@ -93,9 +93,9 @@ options:
   -s [SAVE], --save [SAVE]
                         Save the current session. Save to the default session if not specified a session name.
   -c [CLOSE_ALL ...], --close-all [CLOSE_ALL ...]
-                        Close the windows gracefully. Close all windows if only -c/--close-all is present. You can specify
-                        arguments to tell me which windows should be closed, that is <window_id>, <pid>, <app_name> or
-                        <title_name> exactly the same as -x.
+                        Close the windows gracefully. Close all windows if only -c/--close-all present. Or close one or more
+                        apps if arguments provided, which supports <window_id>, <pid>, <app_name> or <title_name> exactly the
+                        same as -x. For example: `xsm -c gedit 23475 0x03e00004`
   -im, --including-apps-with-multiple-windows
                         Close the windows gracefully including apps with multiple windows
   -r [RESTORE], --restore [RESTORE]
