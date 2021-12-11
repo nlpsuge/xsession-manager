@@ -1,4 +1,4 @@
-from utils import wmctl_wrapper
+from ..utils import wmctl_wrapper
 
 
 def test_get_windows():

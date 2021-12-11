@@ -37,8 +37,8 @@ class XSessionManager:
     base_location_of_backup_sessions: str
 
     def __init__(self, 
-                 verbose: bool,
-                 vv: bool,
+                 verbose: bool=False,
+                 vv: bool=False,
                  session_filters: List[SessionFilter]=None,
                  base_location_of_sessions: str=Locations.BASE_LOCATION_OF_SESSIONS,
                  base_location_of_backup_sessions: str=Locations.BASE_LOCATION_OF_BACKUP_SESSIONS):
@@ -108,33 +108,37 @@ class XSessionManager:
                 process = psutil.Process(sd.pid)
                 sd.username = process.username()
                 sd.cmd = process.cmdline()
-                sd.app_name = wnck_utils.get_app_name(sd.window_id_the_int_type)
                 sd.process_create_time = datetime.datetime.fromtimestamp(process.create_time()).strftime("%Y-%m-%d %H:%M:%S")
                 sd.cpu_percent = process.cpu_percent()
                 sd.memory_percent = process.memory_percent()
-                sd.window_state = sd.WindowState()
-                sd.window_state.is_above = wnck_utils.is_above(sd.window_id_the_int_type)
-                sd.window_state.is_sticky = wnck_utils.is_sticky(sd.window_id_the_int_type)
-                sd.windows_count = counter[sd.pid]
-                
-                geometry = wnck_utils.get_geometry(sd.window_id_the_int_type)
-                if geometry is None:
-                    sleep(0.25)
-                    geometry = wnck_utils.get_geometry(sd.window_id_the_int_type)
-                if geometry:
-                    x_offset, y_offset, width, height = geometry
-                    window_position = sd.WindowPosition()
-                    window_position.x_offset = x_offset
-                    window_position.y_offset = y_offset
-                    window_position.width = width
-                    window_position.height = height
-                    window_position.provider = 'Wnck'
-                    sd.window_position = window_position
             except psutil.NoSuchProcess as e:
-                print('Failed to get process [%s] info using psutil due to: %s' % (sd, str(e)))
-                sd.app_name = ''
+                if self.verbose:
+                    print('Failed to get process [%s] info using psutil due to: %s' % (sd, str(e)))
+                sd.username = ''
                 sd.cmd = []
                 sd.process_create_time = None
+                sd.cpu_percent = 0.0
+                sd.memory_percent = 0.0
+                
+            sd.app_name = wnck_utils.get_app_name(sd.window_id_the_int_type)
+            sd.window_state = sd.WindowState()
+            sd.window_state.is_above = wnck_utils.is_above(sd.window_id_the_int_type)
+            sd.window_state.is_sticky = wnck_utils.is_sticky(sd.window_id_the_int_type)
+            sd.windows_count = counter[sd.pid]
+            
+            geometry = wnck_utils.get_geometry(sd.window_id_the_int_type)
+            if geometry is None:
+                sleep(0.25)
+                geometry = wnck_utils.get_geometry(sd.window_id_the_int_type)
+            if geometry:
+                x_offset, y_offset, width, height = geometry
+                window_position = sd.WindowPosition()
+                window_position.x_offset = x_offset
+                window_position.y_offset = y_offset
+                window_position.width = width
+                window_position.height = height
+                window_position.provider = 'Wnck'
+                sd.window_position = window_position        
 
         if session_filters:
             for session_filter in session_filters:

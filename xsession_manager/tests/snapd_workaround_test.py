@@ -3,7 +3,7 @@ from typing import List, Dict
 import gi
 import psutil
 
-from utils import snapd_workaround
+from ..utils import snapd_workaround
 
 gi.require_version('Wnck', '3.0')
 from gi.repository import Wnck
