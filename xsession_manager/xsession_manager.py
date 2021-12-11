@@ -52,7 +52,7 @@ class XSessionManager:
         self.opened_window_id_pid_old: Dict[int, List[int]] = {}
 
         self._windows_can_not_be_moved: List[XSessionConfigObject] = []
-        self._restore_geometry = False
+        self._restore_geometry_or_not = False
         self.verbose = verbose
         self.vv = vv
         self.restore_app_countdown = -1
@@ -261,7 +261,7 @@ class XSessionManager:
                           restoring_interval,
                           _x_session_config_objects_copy: List[XSessionConfigObject]):
         self._suppress_log_if_already_in_workspace = True
-        self._restore_geometry = True
+        self._restore_geometry_or_not = True
 
         running_restores = []
         failed_restores = []
@@ -530,7 +530,7 @@ class XSessionManager:
             print(traceback.format_exc())
 
     def _restore_geometry(self, x_session_config_object: XSessionConfigObject):
-        if not self._restore_geometry:
+        if not self._restore_geometry_or_not:
             return
 
         window_position = x_session_config_object.window_position
