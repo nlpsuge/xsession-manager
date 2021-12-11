@@ -243,12 +243,11 @@ class XSessionManager:
             
     def calculate_retry_count_down(self, _x_session_config_objects_copy: List[XSessionConfigObject]):
         retry_count_down = 30
-        window_counts = [s.windows_count for s in _x_session_config_objects_copy 
-                         if hasattr(s, 'windows_count')]
-        if window_counts:
-            max_windows_number = max(window_counts)
-            if max_windows_number == 1:
-                retry_count_down = 5
+        max_windows_count_app = max(_x_session_config_objects_copy, key=lambda x: x.windows_count 
+                                                if hasattr(x, 'windows_count') else -1)
+        if hasattr(max_windows_count_app, 'windows_count') \
+                and max_windows_count_app.windows_count == 1:
+            retry_count_down = 5
         if self.verbose:
             print('Calculated retry_count_down: %d' % retry_count_down)
         return retry_count_down
@@ -293,8 +292,11 @@ class XSessionManager:
                     if not launched:
                         print('Failure to restore the application named %s '
                               'due to empty commandline [%s]'
-                              % (app_name, str(cmd)))
-                    sleep(restoring_interval)
+                              % (app_name, str(cmd))) 
+                    else:
+                        sleep(restoring_interval)
+                        if self.verbose:
+                            print('%s launched' % app_name)
                     self.move_window(session_name)
                     continue
 
@@ -325,7 +327,8 @@ class XSessionManager:
                         raise fnfe
 
                 if launched:
-                    print('%s launched' % app_name)
+                    if self.verbose:
+                        print('%s launched' % app_name)
                     sleep(restoring_interval)
                     if index == len(_x_session_config_objects_copy) - 1 \
                             or index % 3 == 0: # move windows while every 3 apps launched
