@@ -64,7 +64,7 @@ class Snapd:
         # Visit https://regex101.com/r/SXUlVX/ to check the explanation of this regular expression pattern
         c = re.compile(r'([\/]|[\\]{,2})snap([\/]|[\\]{,2})[\w:\-]+([\/]|[\\]{,2})[\d]+')
         r = c.search(app_cmd)
-        if r is not None:
+        if r:
             match = r.group()
             snap_app_name = re.split(r'[/|\\]+', match)[2]
             return True, snap_app_name

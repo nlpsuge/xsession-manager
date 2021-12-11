@@ -52,7 +52,7 @@ class XSessionManager:
         self.opened_window_id_pid_old: Dict[int, List[int]] = {}
 
         self._windows_can_not_be_moved: List[XSessionConfigObject] = []
-        self._if_restore_geometry = False
+        self._restore_geometry = False
         self.verbose = verbose
         self.vv = vv
         self.restore_app_countdown = -1
@@ -136,7 +136,7 @@ class XSessionManager:
                 sd.cmd = []
                 sd.process_create_time = None
 
-        if session_filters is not None:
+        if session_filters:
             for session_filter in session_filters:
                 if session_filter is None:
                     continue
@@ -188,7 +188,7 @@ class XSessionManager:
                 session_details_dict = {x_session_config.pid: x_session_config
                                         for x_session_config in x_session_config_objects}
                 x_session_config_objects = list(session_details_dict.values())
-                if self.session_filters is not None:
+                if self.session_filters:
                     for session_filter in self.session_filters:
                         if session_filter is None:
                             continue
@@ -257,7 +257,7 @@ class XSessionManager:
                           restoring_interval,
                           _x_session_config_objects_copy: List[XSessionConfigObject]):
         self._suppress_log_if_already_in_workspace = True
-        self._if_restore_geometry = True
+        self._restore_geometry = True
 
         running_restores = []
         failed_restores = []
@@ -354,12 +354,15 @@ class XSessionManager:
         for pid, group_by_pid in groupby(sessions, key=attrgetter('pid')):
             a_process_with_many_windows: List[XSessionConfigObject] = list(group_by_pid)
             if len(a_process_with_many_windows) > 1:
-                if including_apps_with_multiple_windows:
-                    a_process_with_many_windows.sort(key=attrgetter('window_id'), reverse=True)
-                    # Close one application's windows one by one from the last one
-                    for session in a_process_with_many_windows:
-                        print('Closing %s(%s %s).' % (session.app_name, session.window_id, session.pid))
-                        wnck_utils.close_window_gracefully_async(session.window_id_the_int_type)
+                # Do not close the app with more than one windows
+                if not including_apps_with_multiple_windows:
+                    continue
+
+                a_process_with_many_windows.sort(key=attrgetter('window_id'), reverse=True)
+                # Close one application's windows one by one, starting with the most top one
+                for session in a_process_with_many_windows:
+                    print('Closing %s(%s %s).' % (session.app_name, session.window_id, session.pid))
+                    wnck_utils.close_window_gracefully_async(session.window_id_the_int_type)
             else:
                 session = a_process_with_many_windows[0]
                 print('Closing %s(%s %s).' % (session.app_name, session.window_id, session.pid))
@@ -379,7 +382,7 @@ class XSessionManager:
         x_session_config_objects: List[XSessionConfigObject] = namespace_objs.x_session_config_objects
         x_session_config_objects.sort(key=attrgetter('desktop_number'))
 
-        if self.session_filters is not None:
+        if self.session_filters:
             for session_filter in self.session_filters:
                 if session_filter is None:
                     continue
@@ -523,22 +526,24 @@ class XSessionManager:
             print(traceback.format_exc())
 
     def _restore_geometry(self, x_session_config_object: XSessionConfigObject):
-        if self._if_restore_geometry is False:
+        if not self._restore_geometry:
             return
 
         window_position = x_session_config_object.window_position
-        if hasattr(window_position, 'provider'):
-            provider = window_position.provider
-            if provider == 'Wnck':
-                x_offset = window_position.x_offset
-                y_offset = window_position.y_offset
-                width = window_position.width
-                height = window_position.height
-                wnck_utils.set_geometry(x_session_config_object.window_id_the_int_type,
-                                        x_offset,
-                                        y_offset,
-                                        width,
-                                        height)
+        if not hasattr(window_position, 'provider'):
+            return
+
+        provider = window_position.provider
+        if provider == 'Wnck':
+            x_offset = window_position.x_offset
+            y_offset = window_position.y_offset
+            width = window_position.width
+            height = window_position.height
+            wnck_utils.set_geometry(x_session_config_object.window_id_the_int_type,
+                                    x_offset,
+                                    y_offset,
+                                    width,
+                                    height)
 
     def fix_window_state(self,
                          window_state: XSessionConfigObject.WindowState,
