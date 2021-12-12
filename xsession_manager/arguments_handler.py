@@ -122,7 +122,8 @@ class ArgumentsHandler():
             xsm = XSessionManager(verbose=self.args.verbose, vv=self.args.vv)
             xsm.save_session(session_name_for_saving)
 
-        if close_all:
+        # Empty close_all means close all windows
+        if close_all is not None:
             print(constants.Prompts.MSG_CLOSE_ALL_WINDOWS)
             self.wait_for_answer()
             # TODO Order sensitive?
