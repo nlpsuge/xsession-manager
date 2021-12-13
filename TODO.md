@@ -30,9 +30,9 @@ Note that this to-do list may not cover all cases.
   - [x] Add setup.py
 - [ ] Automatically click OK button while closing a window
 - [ ] Using a log framework instead of `print`
-  - [ ] Add '-v/--verbose' to print debugging information
+  - [x] Add '-v/--verbose' to print debugging information
 - [ ] Provide -y/--yes option to answer 'yes' to all questions
-  - [ ] Can not exit when using with `yes` command, pressing ctrl + c in terminal kill all applications
+  - [x] Can not exit when using with `yes` command, pressing ctrl + c in terminal kill all applications 
 - [x] Move windows to the workspace that they belong in last time 
   - [x] When restoring session.
   - [x] By using '-ma/--move-automatically'
@@ -46,3 +46,4 @@ Note that this to-do list may not cover all cases.
     - [ ] Add --allow-root
 - [ ] Add restoring history
 - [ ] Add -q combined with -t to query details
+- [ ] Write a Gnome-Shell extension to provide the most features of this project and additional features (e.g. [[question] automatically xsm -s](https://github.com/nlpsuge/xsession-manager/issues/30)), which should support both X.org and Wayland.
