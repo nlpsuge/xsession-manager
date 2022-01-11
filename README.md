@@ -5,6 +5,8 @@ Save and restore windows for X11 desktop environment like Gnome, and many other 
 This project was written in ```Bash``` originally. But now I'm completely rewriting it in ```Python```
 which obviously makes it way more flexible, extensible.
 
+***If you are a Gnome 3 user and also want to use these similar features on Wayland, please give [Another Window Session Manager](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager) a try, it's a Gnome extension, much more faster than `xsm`, and much more native experience on Gnome.***
+
 [![Downloads](https://pepy.tech/badge/xsession-manager/month)](https://pepy.tech/project/xsession-manager)
 [![Supported Versions](https://img.shields.io/pypi/pyversions/xsession-manager.svg)](https://pypi.org/project/xsession-manager)
 [![Pypi Versions](https://img.shields.io/pypi/v/xsession-manager.svg)](https://pypi.python.org/pypi/xsession-manager)
