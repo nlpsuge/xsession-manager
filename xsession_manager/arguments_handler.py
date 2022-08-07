@@ -170,7 +170,7 @@ class ArgumentsHandler():
                 try:
                     file_path = Path(constants.Locations.BASE_LOCATION_OF_SESSIONS, file)
                     with open(file_path, 'r') as f:
-                        num = num + 1
+                        num += 1
                         namespace_objs: XSessionConfig = json.load(f, object_hook=lambda d: Namespace(**d))
                         print(str(num) +'. ' + namespace_objs.session_name, 
                               namespace_objs.session_create_time, 
@@ -201,7 +201,7 @@ class ArgumentsHandler():
                 # Print data according to declared order
                 ordered_variables = vars(XSessionConfigObject)['__annotations__']
                 for x_session_config_object in x_session_config_objects:
-                    count = count + 1
+                    count += 1
                     print('%d.' % count)
 
                     # Get fields in declared order
