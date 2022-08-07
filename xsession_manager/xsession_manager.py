@@ -233,7 +233,7 @@ class XSessionManager:
             while Gtk.events_pending():
                 Gtk.main_iteration()
 
-            retry_count_down = retry_count_down - 1
+            retry_count_down -= 1
 
             self._suppress_log_if_already_in_workspace = True
             self.move_window(session_name)
@@ -281,7 +281,7 @@ class XSessionManager:
                         running_restores.append(index)
                         is_running = True
                         with self.instance_lock:
-                            self.restore_app_countdown = self.restore_app_countdown - 1
+                            self.restore_app_countdown -= 1
                         break
                 if is_running:
                     continue
